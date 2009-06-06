@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.01000';
+our $VERSION = '0.01001';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -516,12 +516,11 @@ while ( @$api_def ) {
         my $code = sub {
             my $self = shift;
 
-            my $args = {};
-            if ( ref $_[0] ) {
-                ref $_[0] eq 'HASH' && @_ == 1 || croak "$name expected a single HASH ref argument";
-                $args = { %{shift()} }; # copy callers args since we may add ->{source}
-            }
-            elsif ( @_ ) {
+            # copy callers args since we may add ->{source}
+            my $args = ref $_[-1] eq 'HASH' ? { %{pop @_} } : {};
+
+            if ( @_ ) {
+                ref $_[$_] && croak "arg $_ must not be a reference" for 0..$#_;
                 @_ == @$arg_names || croak "$name expected @{[ scalar @$arg_names ]} args";
                 @{$args}{@$arg_names} = @_;
             }
@@ -583,7 +582,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.01000
+This document describes Net::Twitter::Lite version 0.01001
 
 =head1 SYNOPSIS
 
@@ -825,7 +824,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.01000 (Perl)".
+"Net::Twitter::Lite/0.01001 (Perl)".
 
 =item source
 
