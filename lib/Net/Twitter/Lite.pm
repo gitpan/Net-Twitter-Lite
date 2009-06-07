@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.01001';
+our $VERSION = '0.02000';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -115,6 +115,15 @@ my $api_def = [
             add_source  => 0,
             deprecated  => 0,
         } ],
+        [ 'create_saved_search', {
+            aliases     => [ qw// ],
+            path        => 'saved_searches/create',
+            method      => 'POST',
+            params      => [ qw/query/ ],
+            required    => [ qw/query/ ],
+            add_source  => 0,
+            deprecated  => 0,
+        } ],
         [ 'destroy_block', {
             aliases     => [ qw// ],
             path        => 'blocks/destroy/id',
@@ -147,6 +156,15 @@ my $api_def = [
             path        => 'friendships/destroy/id',
             method      => 'POST',
             params      => [ qw/id user_id screen_name/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+        } ],
+        [ 'destroy_saved_search', {
+            aliases     => [ qw// ],
+            path        => 'saved_searches/destroy/id',
+            method      => 'POST',
+            params      => [ qw/id/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
@@ -304,12 +322,30 @@ my $api_def = [
             add_source  => 0,
             deprecated  => 0,
         } ],
+        [ 'saved_searches', {
+            aliases     => [ qw// ],
+            path        => 'saved_searches',
+            method      => 'GET',
+            params      => [ qw// ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+        } ],
         [ 'sent_direct_messages', {
             aliases     => [ qw// ],
             path        => 'direct_messages/sent',
             method      => 'GET',
             params      => [ qw/since_id max_id page/ ],
             required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+        } ],
+        [ 'show_saved_search', {
+            aliases     => [ qw// ],
+            path        => 'saved_searches/show/id',
+            method      => 'GET',
+            params      => [ qw/id/ ],
+            required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
         } ],
@@ -582,7 +618,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.01001
+This document describes Net::Twitter::Lite version 0.02000
 
 =head1 SYNOPSIS
 
@@ -824,7 +860,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.01001 (Perl)".
+"Net::Twitter::Lite/0.02000 (Perl)".
 
 =item source
 
@@ -1045,6 +1081,25 @@ failure condition when unsuccessful.
 
 Returns: BasicUser
 
+=item B<create_saved_search>
+
+=item B<create_saved_search(query)>
+
+
+
+=over 4
+
+=item Parameters: query
+
+=item Required: query
+
+=back
+
+Creates a saved search for the authenticated user.
+
+
+Returns: SavedSearch
+
 =item B<destroy_block>
 
 =item B<destroy_block(id)>
@@ -1128,6 +1183,26 @@ Returns a string describing the failure condition when unsuccessful.
 
 
 Returns: BasicUser
+
+=item B<destroy_saved_search>
+
+=item B<destroy_saved_search(id)>
+
+
+
+=over 4
+
+=item Parameters: id
+
+=item Required: id
+
+=back
+
+Destroys a saved search. The search, specified by C<id>, must be owned
+by the authenticating user.
+
+
+Returns: SavedSearch
 
 =item B<destroy_status>
 
@@ -1459,6 +1534,23 @@ the requester's IP address is returned.
 
 Returns: RateLimitStatus
 
+=item B<saved_searches>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the authenticated user's saved search queries.
+
+
+Returns: ArrayRef[SavedSearch]
+
 =item B<sent_direct_messages>
 
 
@@ -1476,6 +1568,25 @@ user including detailed information about the sending and recipient users.
 
 
 Returns: ArrayRef[DirectMessage]
+
+=item B<show_saved_search>
+
+=item B<show_saved_search(id)>
+
+
+
+=over 4
+
+=item Parameters: id
+
+=item Required: id
+
+=back
+
+Retrieve the data for a saved search, by ID, owned by the authenticating user.
+
+
+Returns: SavedSearch
 
 =item B<show_status>
 
