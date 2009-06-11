@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.02001';
+our $VERSION = '0.02002';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -16,6 +16,7 @@ sub new {
 
     my $new = bless {
         apiurl     => 'http://twitter.com',
+        apirealm   => 'Twitter API',
 	$args{identica} ? ( apiurl => 'http://identi.ca/api' ) : (),
         searchurl  => 'http://search.twitter.com',
         useragent  => __PACKAGE__ . "/$VERSION (Perl)",
@@ -41,16 +42,25 @@ sub new {
     $new->{ua}->default_header('X-Twitter-Client-URL'     => $new->{clienturl});
     $new->{ua}->env_proxy;
 
+    $new->credentials(@{$new}{qw/username password/})
+        if exists $new->{username} && exists $new->{password};
+
     return $new;
 }
 
 sub credentials {
     my $self = shift;
+    my ($username, $password) = @_;
 
     croak "exected a username and password" unless @_ == 2;
 
-    $self->{username} = shift;
-    $self->{password} = shift;
+    $self->{username} = $username;
+    $self->{password} = $password;
+
+    my $uri = URI->new($self->{apiurl});
+    my $netloc = join ':', $uri->host, $uri->port;
+
+    $self->{ua}->credentials($netloc, $self->{apirealm}, $username, $password);
 }
 
 my $api_def = [
@@ -612,7 +622,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.02001
+This document describes Net::Twitter::Lite version 0.02002
 
 =head1 SYNOPSIS
 
@@ -854,7 +864,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.02001 (Perl)".
+"Net::Twitter::Lite/0.02002 (Perl)".
 
 =item source
 
