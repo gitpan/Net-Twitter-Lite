@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.03000';
+our $VERSION = '0.03001';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -263,7 +263,7 @@ sub _basic_authenticated_request {
     }
 
     if ( $self->{username} && $self->{password} ) {
-        $msg->header(HTTP::Header->new->authorization_basic(@{$self}{qw/username password/}));
+        $msg->headers->authorization_basic(@{$self}{qw/username password/});
     }
 
     return $self->{ua}->request($msg);
@@ -818,7 +818,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.03000
+This document describes Net::Twitter::Lite version 0.03001
 
 =head1 SYNOPSIS
 
@@ -1082,7 +1082,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.03000 (Perl)".
+"Net::Twitter::Lite/0.03001 (Perl)".
 
 =item source
 
