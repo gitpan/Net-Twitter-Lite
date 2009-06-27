@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.03001';
+our $VERSION = '0.04000';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -225,35 +225,37 @@ sub _authenticated_request {
 }
 
 sub _oauth_authenticated_request {
-    my ($self, $http_method, $uri, $args) = @_;
-
-    my $request = $self->_make_oauth_request(
-        'protected resource',
-        request_url    => $uri,
-        request_method => $http_method,
-        token          => $self->access_token,
-        token_secret   => $self->access_token_secret,
-    );
+    my ($self, $http_method, $uri, $args, $authenticate) = @_;
 
     my $msg;
-
     if ( $http_method eq 'GET' ) {
         $uri->query_form($args);
-        $msg = GET($uri, Authorization => $request->to_authorization_header);
+        $msg = GET($uri);
     }
     elsif ( $http_method eq 'POST' ) {
         delete $args->{source}; # no necessary with OAuth requests
-        $msg = POST($request->request_url, $args, Authorization => $request->to_authorization_header);
+        $msg = POST($uri, $args);
+    }
+
+    if ( $authenticate && $self->authorized ) {
+        my $request = $self->_make_oauth_request(
+            'protected resource',
+            request_url    => $uri,
+            request_method => $http_method,
+            token          => $self->access_token,
+            token_secret   => $self->access_token_secret,
+        );
+
+        $msg->header(Authorization => $request->to_authorization_header);
     }
 
     return $self->{ua}->request($msg);
 }
 
 sub _basic_authenticated_request {
-    my ($self, $http_method, $uri, $args) = @_;
+    my ($self, $http_method, $uri, $args, $authenticate) = @_;
 
     my $msg;
-
     if ( $http_method eq 'GET' ) {
         $uri->query_form($args);
         $msg = GET($uri);
@@ -262,7 +264,7 @@ sub _basic_authenticated_request {
         $msg = POST($uri, $args);
     }
 
-    if ( $self->{username} && $self->{password} ) {
+    if ( $authenticate && $self->{username} && $self->{password} ) {
         $msg->headers->authorization_basic(@{$self}{qw/username password/});
     }
 
@@ -279,6 +281,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'blocking', {
             aliases     => [ qw// ],
@@ -288,6 +291,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'blocking_ids', {
             aliases     => [ qw// ],
@@ -297,6 +301,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'create_block', {
             aliases     => [ qw// ],
@@ -306,6 +311,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'create_favorite', {
             aliases     => [ qw// ],
@@ -315,6 +321,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'create_friend', {
             aliases     => [ qw/follow_new/ ],
@@ -324,6 +331,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'create_saved_search', {
             aliases     => [ qw// ],
@@ -333,6 +341,7 @@ my $api_def = [
             required    => [ qw/query/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'destroy_block', {
             aliases     => [ qw// ],
@@ -342,6 +351,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'destroy_direct_message', {
             aliases     => [ qw// ],
@@ -351,6 +361,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'destroy_favorite', {
             aliases     => [ qw// ],
@@ -360,6 +371,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'destroy_friend', {
             aliases     => [ qw/unfollow/ ],
@@ -369,6 +381,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'destroy_saved_search', {
             aliases     => [ qw// ],
@@ -378,6 +391,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'destroy_status', {
             aliases     => [ qw// ],
@@ -387,6 +401,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'direct_messages', {
             aliases     => [ qw// ],
@@ -396,6 +411,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'disable_notifications', {
             aliases     => [ qw// ],
@@ -405,6 +421,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'downtime_schedule', {
             aliases     => [ qw// ],
@@ -414,6 +431,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 1,
+            authenticate => 1,
         } ],
         [ 'enable_notifications', {
             aliases     => [ qw// ],
@@ -423,6 +441,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'end_session', {
             aliases     => [ qw// ],
@@ -432,6 +451,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'favorites', {
             aliases     => [ qw// ],
@@ -441,6 +461,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'followers', {
             aliases     => [ qw// ],
@@ -450,6 +471,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'followers_ids', {
             aliases     => [ qw// ],
@@ -459,6 +481,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'friends', {
             aliases     => [ qw/following/ ],
@@ -468,6 +491,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'friends_ids', {
             aliases     => [ qw/following_ids/ ],
@@ -477,6 +501,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'friends_timeline', {
             aliases     => [ qw/following_timeline/ ],
@@ -486,6 +511,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'friendship_exists', {
             aliases     => [ qw/relationship_exists follows/ ],
@@ -495,6 +521,7 @@ my $api_def = [
             required    => [ qw/user_a user_b/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'mentions', {
             aliases     => [ qw/replies/ ],
@@ -504,15 +531,17 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'new_direct_message', {
             aliases     => [ qw// ],
             path        => 'direct_messages/new',
             method      => 'POST',
-            params      => [ qw/user text/ ],
+            params      => [ qw/user text screen_name user_id/ ],
             required    => [ qw/user text/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'public_timeline', {
             aliases     => [ qw// ],
@@ -522,6 +551,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'rate_limit_status', {
             aliases     => [ qw// ],
@@ -531,6 +561,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'saved_searches', {
             aliases     => [ qw// ],
@@ -540,6 +571,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'sent_direct_messages', {
             aliases     => [ qw// ],
@@ -549,6 +581,17 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'show_friendship', {
+            aliases     => [ qw/show_relationship/ ],
+            path        => 'friendships/show',
+            method      => 'GET',
+            params      => [ qw/source_id source_screen_name target_id target_id_name/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'show_saved_search', {
             aliases     => [ qw// ],
@@ -558,6 +601,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'show_status', {
             aliases     => [ qw// ],
@@ -567,6 +611,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'show_user', {
             aliases     => [ qw// ],
@@ -576,6 +621,7 @@ my $api_def = [
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'test', {
             aliases     => [ qw// ],
@@ -585,6 +631,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'update', {
             aliases     => [ qw// ],
@@ -594,6 +641,7 @@ my $api_def = [
             required    => [ qw/status/ ],
             add_source  => 1,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'update_delivery_device', {
             aliases     => [ qw// ],
@@ -603,6 +651,7 @@ my $api_def = [
             required    => [ qw/device/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'update_location', {
             aliases     => [ qw// ],
@@ -612,6 +661,7 @@ my $api_def = [
             required    => [ qw/location/ ],
             add_source  => 0,
             deprecated  => 1,
+            authenticate => 1,
         } ],
         [ 'update_profile', {
             aliases     => [ qw// ],
@@ -621,6 +671,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'update_profile_background_image', {
             aliases     => [ qw// ],
@@ -630,6 +681,7 @@ my $api_def = [
             required    => [ qw/image/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'update_profile_colors', {
             aliases     => [ qw// ],
@@ -639,6 +691,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'update_profile_image', {
             aliases     => [ qw// ],
@@ -648,6 +701,7 @@ my $api_def = [
             required    => [ qw/image/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'user_timeline', {
             aliases     => [ qw// ],
@@ -657,6 +711,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
         [ 'verify_credentials', {
             aliases     => [ qw// ],
@@ -666,6 +721,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 1,
         } ],
     ] ],
     [ Search => [
@@ -677,6 +733,7 @@ my $api_def = [
             required    => [ qw/q/ ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 0,
         } ],
         [ 'trends', {
             aliases     => [ qw// ],
@@ -686,6 +743,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 0,
         } ],
         [ 'trends_current', {
             aliases     => [ qw// ],
@@ -695,6 +753,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 0,
         } ],
         [ 'trends_daily', {
             aliases     => [ qw// ],
@@ -704,6 +763,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 0,
         } ],
         [ 'trends_weekly', {
             aliases     => [ qw// ],
@@ -713,6 +773,7 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
+            authenticate => 0,
         } ],
     ] ],
 ];
@@ -760,6 +821,10 @@ while ( @$api_def ) {
             }
             $args->{source} ||= $self->{source} if $options{add_source};
 
+            my $authenticate = exists $args->{authenticate}  ? delete $args->{authenticate}
+                             : $options{authenticate}
+                             ;
+
             my $local_path = $modify_path->($path, $args);
             
             my $uri = URI->new($base_url->($self) . "/$local_path.json");
@@ -767,7 +832,9 @@ while ( @$api_def ) {
             # upgrade params to UTF-8 so latin-1 literals can be handled as UTF-8 too
             utf8::upgrade $_ for values %$args;
 
-            return $self->_parse_result($self->_authenticated_request($options{method}, $uri, $args));
+            return $self->_parse_result(
+                $self->_authenticated_request($options{method}, $uri, $args, $authenticate)
+            );
         };
 
         no strict 'refs';
@@ -818,7 +885,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.03001
+This document describes Net::Twitter::Lite version 0.04000
 
 =head1 SYNOPSIS
 
@@ -1082,7 +1149,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.03001 (Perl)".
+"Net::Twitter::Lite/0.04000 (Perl)".
 
 =item source
 
@@ -1220,6 +1287,17 @@ Aliases support both the HASH ref and convenient forms:
 Methods that support the C<page> parameter expect page numbers E<gt> 0.  Twitter silently
 ignores invalid C<page> values.  So C<< { page => 0 } >> produces the same result
 as C<< { page => 1 } >>.
+
+In addition to the arguments specified for each API method described below, an
+additional C<authenticate> parameter can be passed.  To request an
+C<Authorization> header, pass C<< authenticated => 1 >>; to suppress an
+authentication header, pass C<< authentication => 0 >>.  Even if requested, an
+Authorization header will not be added if there are no user credentials
+(username and password for Basic Authentication; access tokens for OAuth).
+
+This is probably only useful for the L</rate_limit_status> method in the REST
+API, since it returns different values for an authenticated and a
+non-authenticated call.
 
 =head1 REST API Methods
 
@@ -1766,7 +1844,7 @@ Returns: ArrayRef[Status]
 
 =over 4
 
-=item Parameters: user, text
+=item Parameters: user, text, screen_name, user_id
 
 =item Required: user, text
 
@@ -1774,7 +1852,8 @@ Returns: ArrayRef[Status]
 
 Sends a new direct message to the specified user from the authenticating user.
 Requires both the user and text parameters.  Returns the sent message when
-successful.
+successful.  In order to support numeric screen names, the C<screen_name> or
+C<user_id> parameters may be used instead of C<user>.
 
 
 Returns: DirectMessage
@@ -1796,6 +1875,11 @@ set a custom user icon.  Does not require authentication.  Note that
 the public timeline is cached for 60 seconds so requesting it more
 often than that is a waste of resources.
 
+If user credentials are provided, C<public_timeline> calls are authenticated,
+so they count against the authenticated user's rate limit.  Use C<<
+->public_timeline({ authenticate => 0 }) >> to make an unauthenticated call
+which will count against the calling IP address' rate limit, instead.
+
 
 Returns: ArrayRef[Status]
 
@@ -1812,11 +1896,12 @@ Returns: ArrayRef[Status]
 =back
 
 Returns the remaining number of API requests available to the
-requesting user before the API limit is reached for the current hour.
-Calls to rate_limit_status do not count against the rate limit.  If
-authentication credentials are provided, the rate limit status for the
-authenticating user is returned.  Otherwise, the rate limit status for
-the requester's IP address is returned.
+authenticated user before the API limit is reached for the current hour.
+
+Use C<< ->rate_limit_status({ authenticate => 0 }) >> to force an
+unauthenticated call, which will return the status for the IP address rather
+than the authenticated user. (Note: for a web application, this is the server's
+IP address.)
 
 
 Returns: RateLimitStatus
@@ -1855,6 +1940,27 @@ user including detailed information about the sending and recipient users.
 
 
 Returns: ArrayRef[DirectMessage]
+
+=item B<show_friendship>
+
+=item B<show_friendship(id)>
+
+
+=item alias: show_relationship
+
+
+=over 4
+
+=item Parameters: source_id, source_screen_name, target_id, target_id_name
+
+=item Required: id
+
+=back
+
+Returns detailed information about the relationship between two users.
+
+
+Returns: Relationship
 
 =item B<show_saved_search>
 
