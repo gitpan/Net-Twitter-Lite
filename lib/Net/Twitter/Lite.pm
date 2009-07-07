@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.04000';
+our $VERSION = '0.04001';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -11,6 +11,7 @@ use URI::Escape;
 use JSON::Any qw/XS DWIW JSON/;
 use HTTP::Request::Common;
 use Net::Twitter::Lite::Error;
+use Digest::SHA;
 
 sub new {
     my ($class, %args) = @_;
@@ -152,7 +153,7 @@ sub _make_oauth_request {
         request_method   => 'GET',
         signature_method => 'HMAC-SHA1',
         timestamp        => time,
-        nonce            => join('', map { ('0'..'9','A'..'Z','a'..'z')[rand(26*2+10)] } 1..16),
+        nonce            => Digest::SHA::sha1_base64(time . $$ . rand),
         %params,
     );
 
@@ -885,7 +886,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.04000
+This document describes Net::Twitter::Lite version 0.04001
 
 =head1 SYNOPSIS
 
@@ -922,6 +923,14 @@ not to install L<Moose> and its dependencies.
 You should consider upgrading to C<Net::Twitter> for additional functionality,
 finer grained control over features, full backwards compatibility with older
 versions of C<Net::Twitter>, and additional error handling options.
+
+=head1 IMPORTANT
+
+Beginning with version 0.03, it is necessary for web applications using OAuth
+authentication to pass the C<callback> parameter to C<get_authorization_url>.
+In the absence of a callback parameter, when the user authorizes the
+application a PIN number is displayed rather than redirecting the user back to
+your site.
 
 =head1 MIGRATING FROM NET::TWITTER 2.x
 
@@ -1149,7 +1158,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.04000 (Perl)".
+"Net::Twitter::Lite/0.04001 (Perl)".
 
 =item source
 
@@ -1210,9 +1219,12 @@ Returns the access token and access token secret but also sets them internally
 so that after calling this method, you can immediately call API methods
 requiring authentication.
 
-=item get_authorization_url
+=item get_authorization_url(callback => $callback_url)
 
-Get the URL used to authorize the user.  Returns a C<URI> object.
+Get the URL used to authorize the user.  Returns a C<URI> object.  For web
+applications, pass your applications callback URL as the C<callback> parameter.
+No arguments are required for desktop applications (C<callback> defaults to
+C<oob>, out-of-band).
 
 =item access_token
 
@@ -2409,7 +2421,7 @@ authorization URL.
       my($self, $c) = @_;
 
       my $nt = Net::Twitter::Lite->new(%param);
-      my $url = $nt->get_authorization_url;
+      my $url = $nt->get_authorization_url(callback => $callbackurl);
 
       $c->response->cookies->{oauth} = {
           value => {

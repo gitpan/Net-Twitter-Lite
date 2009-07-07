@@ -7,7 +7,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.87'
+generated_by: 'Module::Install version 0.91'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -23,7 +23,9 @@ recommends:
   JSON::XS: 0
   Net::OAuth: 0.16
 requires:
-  JSON::Any: 1.19
+  Carp: 0
+  Digest::SHA: 0
+  JSON::Any: 1.21
   LWP::UserAgent: 2.032
   URI::Escape: 0
   perl: 5.005
@@ -31,5 +33,5 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=Net-Twitter-Lite
   homepage: http://github.com/semifor/Net-Twitter-Lite
   license: http://dev.perl.org/licenses/
-  repository: git://github.com/semifor/Net-Twitter-Lite.git
-version: 0.04000
+  repository: git://github.com/semifor/net-twitter-lite.git
+version: 0.04001
