@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.04001';
+our $VERSION = '0.05000';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -16,6 +16,8 @@ use Digest::SHA;
 sub new {
     my ($class, %args) = @_;
 
+    my $ssl   = delete $args{ssl};
+    my $netrc = delete $args{netrc};
     my $new = bless {
         apiurl     => 'http://twitter.com',
         apirealm   => 'Twitter API',
@@ -35,6 +37,20 @@ sub new {
         },
         %args
     }, $class;
+
+    $new->{apiurl} =~ s/http/https/ if $ssl;
+
+    # get username and password from .netrc
+    if ( $netrc ) {
+        eval { require Net::Netrc; 1 }
+            || croak "Net::Netrc is required for the netrc option";
+
+        my $host = URI->new($new->{apiurl})->host;
+        my $nrc = Net::Netrc->lookup($host)
+            || croak "No .netrc entry for $host";
+
+        @{$new}{qw/username password/} = $nrc->lpa;
+    }
 
     $new->{ua} ||= do {
         eval "use $new->{useragent_class}";
@@ -886,7 +902,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.04001
+This document describes Net::Twitter::Lite version 0.05000
 
 =head1 SYNOPSIS
 
@@ -1158,7 +1174,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.04001 (Perl)".
+"Net::Twitter::Lite/0.05000 (Perl)".
 
 =item source
 
@@ -1178,6 +1194,23 @@ The URL for the Twitter API. This defaults to "http://twitter.com".
 
 If set to 1 (or any value that evaluates to true), apiurl defaults to
 "http://identi.ca/api".
+
+=item ssl
+
+If set to 1, an SSL connection will be used for all API calls. Defaults to 0.
+
+=item netrc
+
+If set to 1, Net::Twitter::Lite will look up the host portion of the C<apiurl>
+in the C<.netrc> file to obtain the uC<username> and C<password> arguments.
+
+   # in .netrc
+   machine twitter.com
+   login YOUR_TWITTER_USER_NAME
+   password YOUR_TWITTER_PASSWORD
+
+   # in your perl program
+   $nt = Net::Twitter::Lite->new(netrc => 1);
 
 =back
 
