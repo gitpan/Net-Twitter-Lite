@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.05000';
+our $VERSION = '0.06000';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -12,6 +12,9 @@ use JSON::Any qw/XS DWIW JSON/;
 use HTTP::Request::Common;
 use Net::Twitter::Lite::Error;
 use Digest::SHA;
+use Encode;
+
+my $json_handler = JSON::Any->new(utf8 => 1);
 
 sub new {
     my ($class, %args) = @_;
@@ -247,6 +250,7 @@ sub _oauth_authenticated_request {
     my $msg;
     if ( $http_method eq 'GET' ) {
         $uri->query_form($args);
+        $args = {};
         $msg = GET($uri);
     }
     elsif ( $http_method eq 'POST' ) {
@@ -261,6 +265,7 @@ sub _oauth_authenticated_request {
             request_method => $http_method,
             token          => $self->access_token,
             token_secret   => $self->access_token_secret,
+            extra_params   => $args,
         );
 
         $msg->header(Authorization => $request->to_authorization_header);
@@ -847,7 +852,7 @@ while ( @$api_def ) {
             my $uri = URI->new($base_url->($self) . "/$local_path.json");
 
             # upgrade params to UTF-8 so latin-1 literals can be handled as UTF-8 too
-            utf8::upgrade $_ for values %$args;
+            utf8::upgrade($_), $_ = encode('utf-8', $_) for values %$args;
 
             return $self->_parse_result(
                 $self->_authenticated_request($options{method}, $uri, $args, $authenticate)
@@ -862,7 +867,7 @@ while ( @$api_def ) {
 sub _from_json {
     my ($self, $json) = @_;
 
-    return eval { JSON::Any->from_json($json) };
+    return eval { $json_handler->from_json($json) };
 }
 
 sub _parse_result {
@@ -873,11 +878,7 @@ sub _parse_result {
     my $content = $res->content;
     $content =~ s/^"(true|false)"$/$1/;
 
-    # some JSON backends don't handle booleans correctly
-    # TODO: move this fix to JSON::Any
-    my $obj = $content eq 'true'  ? 1
-            : $content eq 'false' ? ''
-            : $self->_from_json($content);
+    my $obj = $self->_from_json($content);
 
     # Twitter sometimes returns an error with status code 200
     if ( $obj && ref $obj eq 'HASH' && exists $obj->{error} ) {
@@ -902,7 +903,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.05000
+This document describes Net::Twitter::Lite version 0.06000
 
 =head1 SYNOPSIS
 
@@ -1174,7 +1175,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.05000 (Perl)".
+"Net::Twitter::Lite/0.06000 (Perl)".
 
 =item source
 
