@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.06000';
+our $VERSION = '0.06002';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -248,17 +248,8 @@ sub _oauth_authenticated_request {
     my ($self, $http_method, $uri, $args, $authenticate) = @_;
 
     my $msg;
-    if ( $http_method eq 'GET' ) {
-        $uri->query_form($args);
-        $args = {};
-        $msg = GET($uri);
-    }
-    elsif ( $http_method eq 'POST' ) {
-        delete $args->{source}; # no necessary with OAuth requests
-        $msg = POST($uri, $args);
-    }
-
     if ( $authenticate && $self->authorized ) {
+        local $Net::OAuth::SKIP_UTF8_DOUBLE_ENCODE_CHECK = 1;
         my $request = $self->_make_oauth_request(
             'protected resource',
             request_url    => $uri,
@@ -268,7 +259,29 @@ sub _oauth_authenticated_request {
             extra_params   => $args,
         );
 
-        $msg->header(Authorization => $request->to_authorization_header);
+        if ( $http_method eq 'GET' ) {
+            $msg = GET($request->to_url);
+        }
+        elsif ( $http_method eq 'POST' ) {
+            $msg = POST($uri, Content => $request->to_post_body);
+        }
+        else {
+            croak "unexpected http_method: $http_method";
+        }
+    }
+    elsif ( $http_method eq 'GET' ) {
+        $uri->query_form($args);
+        $args = {};
+        $msg = GET($uri);
+    }
+    elsif ( $http_method eq 'POST' ) {
+        delete $args->{source}; # no necessary with OAuth requests
+        my $encoded_args = { %$args };
+        $_ = encode('utf-8', $_) for values %$encoded_args;
+        $msg = POST($uri, $encoded_args);
+    }
+    else {
+        croak "unexpected http_method: $http_method";
     }
 
     return $self->{ua}->request($msg);
@@ -276,6 +289,8 @@ sub _oauth_authenticated_request {
 
 sub _basic_authenticated_request {
     my ($self, $http_method, $uri, $args, $authenticate) = @_;
+
+    $_ = encode('utf-8', $_) for values %$args;
 
     my $msg;
     if ( $http_method eq 'GET' ) {
@@ -851,9 +866,6 @@ while ( @$api_def ) {
             
             my $uri = URI->new($base_url->($self) . "/$local_path.json");
 
-            # upgrade params to UTF-8 so latin-1 literals can be handled as UTF-8 too
-            utf8::upgrade($_), $_ = encode('utf-8', $_) for values %$args;
-
             return $self->_parse_result(
                 $self->_authenticated_request($options{method}, $uri, $args, $authenticate)
             );
@@ -903,7 +915,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.06000
+This document describes Net::Twitter::Lite version 0.06002
 
 =head1 SYNOPSIS
 
@@ -1175,7 +1187,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.06000 (Perl)".
+"Net::Twitter::Lite/0.06002 (Perl)".
 
 =item source
 
