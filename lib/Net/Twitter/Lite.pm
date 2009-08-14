@@ -3,12 +3,12 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.06002';
+our $VERSION = '0.07000';
 $VERSION = eval { $VERSION };
 
 use Carp;
 use URI::Escape;
-use JSON::Any qw/XS DWIW JSON/;
+use JSON::Any qw/XS JSON/;
 use HTTP::Request::Common;
 use Net::Twitter::Lite::Error;
 use Digest::SHA;
@@ -560,6 +560,16 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
         } ],
+        [ 'home_timeline', {
+            aliases     => [ qw// ],
+            path        => 'statuses/home_timeline',
+            method      => 'GET',
+            params      => [ qw/since_id max_id count page/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
         [ 'mentions', {
             aliases     => [ qw/replies/ ],
             path        => 'statuses/replies',
@@ -595,6 +605,46 @@ my $api_def = [
             path        => 'account/rate_limit_status',
             method      => 'GET',
             params      => [ qw// ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'retweet', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweet/id',
+            method      => 'POST',
+            params      => [ qw/id/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'retweeted_by_me', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweeted_by_me',
+            method      => 'GET',
+            params      => [ qw/since_id max_id count page/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'retweeted_of_me', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweeted_by_me',
+            method      => 'GET',
+            params      => [ qw/since_id max_id count page/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'retweeted_to_me', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweeted_by_me',
+            method      => 'GET',
+            params      => [ qw/since_id max_id count page/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
@@ -915,7 +965,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.06002
+This document describes Net::Twitter::Lite version 0.07000
 
 =head1 SYNOPSIS
 
@@ -1187,7 +1237,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.06002 (Perl)".
+"Net::Twitter::Lite/0.07000 (Perl)".
 
 =item source
 
@@ -1874,6 +1924,25 @@ user_a follows user_b, otherwise will return false.
 
 Returns: Bool
 
+=item B<home_timeline>
+
+
+
+=over 4
+
+=item Parameters: since_id, max_id, count, page
+
+=item Required: I<none>
+
+=back
+
+Returns the 20 most recent statuses, including retweets, posted by the
+authenticating user and that user's friends. This is the equivalent of
+/timeline/home on the Web.
+
+
+Returns: ArrayRef[Status]
+
 =item B<mentions>
 
 
@@ -1963,6 +2032,78 @@ IP address.)
 
 
 Returns: RateLimitStatus
+
+=item B<retweet>
+
+=item B<retweet(id)>
+
+
+
+=over 4
+
+=item Parameters: id
+
+=item Required: id
+
+=back
+
+Retweets a tweet. Requires the id parameter of the tweet you are retweeting.
+Returns the original tweet with retweet details embedded.
+
+
+Returns: Status
+
+=item B<retweeted_by_me>
+
+
+
+=over 4
+
+=item Parameters: since_id, max_id, count, page
+
+=item Required: I<none>
+
+=back
+
+Returns the 20 most recent retweets posted by the authenticating user.
+
+
+Returns: ArrayRef[Status]
+
+=item B<retweeted_of_me>
+
+
+
+=over 4
+
+=item Parameters: since_id, max_id, count, page
+
+=item Required: I<none>
+
+=back
+
+Returns the 20 most recent tweets of the authenticated user that have been
+retweeted by others.
+
+
+Returns: ArrayRef[Status]
+
+=item B<retweeted_to_me>
+
+
+
+=over 4
+
+=item Parameters: since_id, max_id, count, page
+
+=item Required: I<none>
+
+=back
+
+Returns the 20 most recent retweets posted by the authenticating user's friends.
+
+
+Returns: ArrayRef[Status]
 
 =item B<saved_searches>
 
