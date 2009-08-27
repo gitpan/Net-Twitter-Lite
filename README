@@ -2,7 +2,7 @@ NAME
     Net::Twitter::Lite - A perl interface to the Twitter API
 
 VERSION
-    This document describes Net::Twitter::Lite version 0.07000
+    This document describes Net::Twitter::Lite version 0.08000
 
 SYNOPSIS
       use Net::Twitter::Lite;
@@ -242,7 +242,7 @@ METHODS AND ARGUMENTS
 
         useragent
             The value for "User-Agent" HTTP header. It defaults to
-            "Net::Twitter::Lite/0.07000 (Perl)".
+            "Net::Twitter::Lite/0.08000 (Perl)".
 
         source
             The value used in the "source" parameter of API method calls. It
@@ -313,6 +313,13 @@ METHODS AND ARGUMENTS
         "callback" parameter. No arguments are required for desktop
         applications ("callback" defaults to "oob", out-of-band).
 
+    get_authentication_url(callback => $callback_url)
+        Get the URL used to authenticate the user with "Sign in with
+        Twitter" authentication flow. Returns a "URI" object. For web
+        applications, pass your applications callback URL as the "callback"
+        parameter. No arguments are required for desktop applications
+        ("callback" defaults to "oob", out-of-band).
+
     access_token
         Get or set the access token.
 
@@ -327,6 +334,9 @@ METHODS AND ARGUMENTS
 
     access_token_url
         Get or set the access_token URL.
+
+    authentication_url
+        Get or set the authentication URL.
 
     authorization_url
         Get or set the authorization URL.

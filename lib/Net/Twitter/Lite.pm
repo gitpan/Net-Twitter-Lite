@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.07000';
+our $VERSION = '0.08000';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -12,7 +12,7 @@ use JSON::Any qw/XS JSON/;
 use HTTP::Request::Common;
 use Net::Twitter::Lite::Error;
 use Digest::SHA;
-use Encode;
+use Encode qw/encode_utf8/;
 
 my $json_handler = JSON::Any->new(utf8 => 1);
 
@@ -34,9 +34,10 @@ sub new {
         useragent_class => 'LWP::UserAgent',
         useragent_args  => {},
         oauth_urls => {
-            request_token_url => "http://twitter.com/oauth/request_token",
-            authorization_url => "http://twitter.com/oauth/authorize",
-            access_token_url  => "http://twitter.com/oauth/access_token",
+            request_token_url  => "http://twitter.com/oauth/request_token",
+            authentication_url => "http://twitter.com/oauth/authenticate",
+            authorization_url  => "http://twitter.com/oauth/authorize",
+            access_token_url   => "http://twitter.com/oauth/access_token",
         },
         %args
     }, $class;
@@ -138,6 +139,7 @@ for my $method ( qw/
 # OAuth url accessors
 for my $method ( qw/
             request_token_url
+            authentication_url
             authorization_url
             access_token_url
         / ) {
@@ -150,16 +152,22 @@ for my $method ( qw/
     };
 }
 
-# get the authorization URL from Twitter
-sub get_authorization_url {
-    my ($self, %params) = @_;
+# get the athorization or authentication url
+sub _get_auth_url {
+    my ($self, $which_url, %params ) = @_;
 
     $self->_request_request_token(%params) unless $self->request_token;
-    
-    my $uri = $self->authorization_url;
+
+    my $uri = $self->$which_url;
     $uri->query_form(oauth_token => $self->request_token);
     return $uri;
 }
+
+# get the authentication URL from Twitter
+sub get_authentication_url { return shift->_get_auth_url(authentication_url => @_) }
+
+# get the authorization URL from Twitter
+sub get_authorization_url { return shift->_get_auth_url(authorization_url => @_) }
 
 # common portion of all oauth requests
 sub _make_oauth_request {
@@ -244,8 +252,20 @@ sub _authenticated_request {
     $self->$authenticator(@_);
 }
 
+sub _encode_args {
+    my $args = shift;
+
+    # Values need to be utf-8 encoded.  Because of a perl bug, exposed when
+    # client code does "use utf8", keys must also be encoded as well.
+    # see: http://www.perlmonks.org/?node_id=668987
+    # and: http://perl5.git.perl.org/perl.git/commit/eaf7a4d2
+    return { map { encode_utf8 $_ } %$args };
+}
+
 sub _oauth_authenticated_request {
     my ($self, $http_method, $uri, $args, $authenticate) = @_;
+    
+    delete $args->{source}; # not necessary with OAuth requests
 
     my $msg;
     if ( $authenticate && $self->authorized ) {
@@ -275,10 +295,9 @@ sub _oauth_authenticated_request {
         $msg = GET($uri);
     }
     elsif ( $http_method eq 'POST' ) {
-        delete $args->{source}; # no necessary with OAuth requests
         my $encoded_args = { %$args };
-        $_ = encode('utf-8', $_) for values %$encoded_args;
-        $msg = POST($uri, $encoded_args);
+        _encode_args($encoded_args);
+        $msg = POST($uri, $args);
     }
     else {
         croak "unexpected http_method: $http_method";
@@ -290,7 +309,7 @@ sub _oauth_authenticated_request {
 sub _basic_authenticated_request {
     my ($self, $http_method, $uri, $args, $authenticate) = @_;
 
-    $_ = encode('utf-8', $_) for values %$args;
+    _encode_args($args);
 
     my $msg;
     if ( $http_method eq 'GET' ) {
@@ -965,7 +984,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.07000
+This document describes Net::Twitter::Lite version 0.08000
 
 =head1 SYNOPSIS
 
@@ -1237,7 +1256,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.07000 (Perl)".
+"Net::Twitter::Lite/0.08000 (Perl)".
 
 =item source
 
@@ -1322,6 +1341,13 @@ applications, pass your applications callback URL as the C<callback> parameter.
 No arguments are required for desktop applications (C<callback> defaults to
 C<oob>, out-of-band).
 
+=item get_authentication_url(callback => $callback_url)
+
+Get the URL used to authenticate the user with "Sign in with Twitter"
+authentication flow.  Returns a C<URI> object.  For web applications, pass your
+applications callback URL as the C<callback> parameter.  No arguments are
+required for desktop applications (C<callback> defaults to C<oob>, out-of-band).
+
 =item access_token
 
 Get or set the access token.
@@ -1341,6 +1367,10 @@ Get or set the request token secret.
 =item access_token_url
 
 Get or set the access_token URL.
+
+=item authentication_url
+
+Get or set the authentication URL.
 
 =item authorization_url
 
