@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.08000';
+our $VERSION = '0.08001';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -984,7 +984,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.08000
+This document describes Net::Twitter::Lite version 0.08001
 
 =head1 SYNOPSIS
 
@@ -1256,7 +1256,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.08000 (Perl)".
+"Net::Twitter::Lite/0.08001 (Perl)".
 
 =item source
 
@@ -2617,7 +2617,7 @@ Here's how to authorize users as a desktop app mode:
       $nt->access_token_secret($access_token_secret);
   }
 
-  unless ( $nt->is_authorized ) {
+  unless ( $nt->authorized ) {
       # The client is not yet authorized: Do it now
       print "Authorize this app at ", $nt->get_authorization_url, " and enter the PIN#\n";
 
