@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.08001';
+our $VERSION = '0.08002';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -11,7 +11,6 @@ use URI::Escape;
 use JSON::Any qw/XS JSON/;
 use HTTP::Request::Common;
 use Net::Twitter::Lite::Error;
-use Digest::SHA;
 use Encode qw/encode_utf8/;
 
 my $json_handler = JSON::Any->new(utf8 => 1);
@@ -104,7 +103,7 @@ sub _oauth {
 
     return $self->{_oauth} ||= do {
         eval "use Net::OAuth 0.16";
-        croak "Install Net::OAuth for OAuth support" if $@;
+        croak "Install Net::OAuth 0.16 or later for OAuth support" if $@;
 
         eval '$Net::OAuth::PROTOCOL_VERSION = Net::OAuth::PROTOCOL_VERSION_1_0A';
         die $@ if $@;
@@ -180,7 +179,7 @@ sub _make_oauth_request {
         request_method   => 'GET',
         signature_method => 'HMAC-SHA1',
         timestamp        => time,
-        nonce            => Digest::SHA::sha1_base64(time . $$ . rand),
+        nonce            => time ^ $$ ^ int(rand 2**32),
         %params,
     );
 
@@ -259,7 +258,7 @@ sub _encode_args {
     # client code does "use utf8", keys must also be encoded as well.
     # see: http://www.perlmonks.org/?node_id=668987
     # and: http://perl5.git.perl.org/perl.git/commit/eaf7a4d2
-    return { map { encode_utf8 $_ } %$args };
+    return { map { ref($_) ? $_ : encode_utf8 $_ } %$args };
 }
 
 sub _oauth_authenticated_request {
@@ -267,23 +266,33 @@ sub _oauth_authenticated_request {
     
     delete $args->{source}; # not necessary with OAuth requests
 
+    my $is_multipart = grep { ref } %$args;
+
     my $msg;
     if ( $authenticate && $self->authorized ) {
         local $Net::OAuth::SKIP_UTF8_DOUBLE_ENCODE_CHECK = 1;
+
         my $request = $self->_make_oauth_request(
             'protected resource',
             request_url    => $uri,
             request_method => $http_method,
             token          => $self->access_token,
             token_secret   => $self->access_token_secret,
-            extra_params   => $args,
+            extra_params   => $is_multipart ? {} : $args,
         );
 
         if ( $http_method eq 'GET' ) {
             $msg = GET($request->to_url);
         }
         elsif ( $http_method eq 'POST' ) {
-            $msg = POST($uri, Content => $request->to_post_body);
+            $msg = $is_multipart
+                 ? POST($request->request_url,
+                        Authorization => $request->to_authorization_header,
+                        Content_Type  => 'form-data',
+                        Content       => [ %$args ],
+                   )
+                 : POST($$uri, Content => $request->to_post_body)
+                 ;
         }
         else {
             croak "unexpected http_method: $http_method";
@@ -297,7 +306,7 @@ sub _oauth_authenticated_request {
     elsif ( $http_method eq 'POST' ) {
         my $encoded_args = { %$args };
         _encode_args($encoded_args);
-        $msg = POST($uri, $args);
+        $msg = $self->_mk_post_msg($uri, $args);
     }
     else {
         croak "unexpected http_method: $http_method";
@@ -317,7 +326,7 @@ sub _basic_authenticated_request {
         $msg = GET($uri);
     }
     elsif ( $http_method eq 'POST' ) {
-        $msg = POST($uri, $args);
+        $msg = $self->_mk_post_msg($uri, $args);
     }
 
     if ( $authenticate && $self->{username} && $self->{password} ) {
@@ -325,6 +334,15 @@ sub _basic_authenticated_request {
     }
 
     return $self->{ua}->request($msg);
+}
+
+sub _mk_post_msg {
+    my ($self, $uri, $args) = @_;
+
+    # if any of the arguments are (array) refs, use form-data
+    return (grep { ref } values %$args)
+         ? POST($uri, Content_Type => 'form-data', Content => [ %$args ])
+         : POST($uri, $args);
 }
 
 my $api_def = [
@@ -523,7 +541,7 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'statuses/followers/id',
             method      => 'GET',
-            params      => [ qw/id user_id screen_name page/ ],
+            params      => [ qw/id user_id screen_name cursor/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
@@ -533,7 +551,7 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'followers/ids/id',
             method      => 'GET',
-            params      => [ qw/id user_id screen_name page/ ],
+            params      => [ qw/id user_id screen_name cursor/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
@@ -543,7 +561,7 @@ my $api_def = [
             aliases     => [ qw/following/ ],
             path        => 'statuses/friends/id',
             method      => 'GET',
-            params      => [ qw/id user_id screen_name page/ ],
+            params      => [ qw/id user_id screen_name cursor/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
@@ -553,7 +571,7 @@ my $api_def = [
             aliases     => [ qw/following_ids/ ],
             path        => 'friends/ids/id',
             method      => 'GET',
-            params      => [ qw/id user_id screen_name page/ ],
+            params      => [ qw/id user_id screen_name cursor/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
@@ -665,6 +683,16 @@ my $api_def = [
             method      => 'GET',
             params      => [ qw/since_id max_id count page/ ],
             required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'retweets', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweets/id',
+            method      => 'GET',
+            params      => [ qw/id count/ ],
+            required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
@@ -921,7 +949,6 @@ while ( @$api_def ) {
             my $args = ref $_[-1] eq 'HASH' ? { %{pop @_} } : {};
 
             if ( @_ ) {
-                ref $_[$_] && croak "arg $_ must not be a reference" for 0..$#_;
                 @_ == @$arg_names || croak "$name expected @{[ scalar @$arg_names ]} args";
                 @{$args}{@$arg_names} = @_;
             }
@@ -984,7 +1011,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.08001
+This document describes Net::Twitter::Lite version 0.08002
 
 =head1 SYNOPSIS
 
@@ -1000,7 +1027,7 @@ This document describes Net::Twitter::Lite version 0.08001
   eval {
       my $statuses = $nt->friends_timeline({ since_id => $high_water, count => 100 });
       for my $status ( @$statuses ) {
-          print "$status->{time} <$status->{user}{screen_name}> $status->{text}\n";
+          print "$status->{created_at} <$status->{user}{screen_name}> $status->{text}\n";
       }
   };
   warn "$@\n" if $@;
@@ -1256,7 +1283,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.08001 (Perl)".
+"Net::Twitter::Lite/0.08002 (Perl)".
 
 =item source
 
@@ -1828,20 +1855,30 @@ Returns: ArrayRef[Status]
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, page
+=item Parameters: id, user_id, screen_name, cursor
 
 =item Required: I<none>
 
 =back
 
-Returns the authenticating user's followers, each with current status
-inline.  They are ordered by the order in which they joined Twitter
-(this is going to be changed).
+Returns a reference to an array of the user's followers.  If C<id>, C<user_id>,
+or C<screen_name> is not specified, the followers of the authenticating user are
+returned.  The returned users are ordered from most recently followed to least
+recently followed.
 
-Returns 100 followers per page.
+Use the optional C<cursor> parameter to retrieve users in pages of 100.  When
+the C<cursor> parameter is used, the return value is a reference to a hash with
+keys C<previous_cursor>, C<next_cursor>, and C<users>.  The value of C<users>
+is a reference to an array of the user's friends. The result set isn't
+guaranteed to be 100 every time as suspended users will be filtered out.  Set
+the optional C<cursor> parameter to -1 to get the first page of users.  Set it
+to the prior return's value of C<previous_cursor> or C<next_cursor> to page
+forward or backwards.  When there are no prior pages, the value of
+C<previous_cursor> will be 0.  When there are no subsequent pages, the value of
+C<next_cursor> will be 0.
 
 
-Returns: ArrayRef[BasicUser]
+Returns: HashRef|ArrayRef[User]
 
 =item B<followers_ids>
 
@@ -1851,16 +1888,26 @@ Returns: ArrayRef[BasicUser]
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, page
+=item Parameters: id, user_id, screen_name, cursor
 
 =item Required: id
 
 =back
 
-Returns an array of numeric IDs for every user is followed by.
+Returns a reference to an array of numeric IDs for every user following the
+specified user.
+
+Use the optional C<cursor> parameter to retrieve IDs in pages of 5000.  When
+the C<cursor> parameter is used, the return value is a reference to a hash with
+keys C<previous_cursor>, C<next_cursor>, and C<ids>.  The value of C<ids> is a
+reference to an array of IDS of the user's followers. Set the optional C<cursor>
+parameter to -1 to get the first page of IDs.  Set it to the prior return's
+value of C<previous_cursor> or C<next_cursor> to page forward or backwards.
+When there are no prior pages, the value of C<previous_cursor> will be 0.  When
+there are no subsequent pages, the value of C<next_cursor> will be 0.
 
 
-Returns: ArrayRef[Int]
+Returns: HashRef|ArrayRef[Int]
 
 =item B<friends>
 
@@ -1870,21 +1917,30 @@ Returns: ArrayRef[Int]
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, page
+=item Parameters: id, user_id, screen_name, cursor
 
 =item Required: I<none>
 
 =back
 
-Returns the authenticating user's friends, each with current status
-inline. They are ordered by the order in which they were added as
-friends. It's also possible to request another user's recent friends
-list via the id parameter.
+Returns a reference to an array of the user's friends.  If C<id>, C<user_id>,
+or C<screen_name> is not specified, the friends of the authenticating user are
+returned.  The returned users are ordered from most recently followed to least
+recently followed.
 
-Returns 100 friends per page.
+Use the optional C<cursor> parameter to retrieve users in pages of 100.  When
+the C<cursor> parameter is used, the return value is a reference to a hash with
+keys C<previous_cursor>, C<next_cursor>, and C<users>.  The value of C<users>
+is a reference to an array of the user's friends. The result set isn't
+guaranteed to be 100 every time as suspended users will be filtered out.  Set
+the optional C<cursor> parameter to -1 to get the first page of users.  Set it
+to the prior return's value of C<previous_cursor> or C<next_cursor> to page
+forward or backwards.  When there are no prior pages, the value of
+C<previous_cursor> will be 0.  When there are no subsequent pages, the value of
+C<next_cursor> will be 0.
 
 
-Returns: ArrayRef[BasicUser]
+Returns: Hashref|ArrayRef[User]
 
 =item B<friends_ids>
 
@@ -1896,19 +1952,26 @@ Returns: ArrayRef[BasicUser]
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, page
+=item Parameters: id, user_id, screen_name, cursor
 
 =item Required: id
 
 =back
 
-Returns an array of numeric IDs for every user the specified user is following.
+Returns a reference to an array of numeric IDs for every user followed the
+specified user.
 
-Currently, Twitter returns IDs ordered from most recently followed to least
-recently followed.  This order may change at any time.
+Use the optional C<cursor> parameter to retrieve IDs in pages of 5000.  When
+the C<cursor> parameter is used, the return value is a reference to a hash with
+keys C<previous_cursor>, C<next_cursor>, and C<ids>.  The value of C<ids> is a
+reference to an array of IDS of the user's friends. Set the optional C<cursor>
+parameter to -1 to get the first page of IDs.  Set it to the prior return's
+value of C<previous_cursor> or C<next_cursor> to page forward or backwards.
+When there are no prior pages, the value of C<previous_cursor> will be 0.  When
+there are no subsequent pages, the value of C<next_cursor> will be 0.
 
 
-Returns: ArrayRef[Int]
+Returns: HashRef|ArrayRef[Int]
 
 =item B<friends_timeline>
 
@@ -2135,6 +2198,25 @@ Returns the 20 most recent retweets posted by the authenticating user's friends.
 
 Returns: ArrayRef[Status]
 
+=item B<retweets>
+
+=item B<retweets(id)>
+
+
+
+=over 4
+
+=item Parameters: id, count
+
+=item Required: id
+
+=back
+
+Returns up to 100 of the first retweets of a given tweet.
+
+
+Returns: Arrayref[Status]
+
 =item B<saved_searches>
 
 
@@ -2346,8 +2428,10 @@ Returns: ExtendedUser
 
 =back
 
-Updates the authenticating user's profile background image.  Expects
-raw multipart data, not a URL to an image.
+Updates the authenticating user's profile background image. The C<image>
+parameter must be an arrayref with the same interpretation as the C<image>
+parameter in the C<update_profile_image> method.  See that method's
+documentation for details.
 
 
 Returns: ExtendedUser
@@ -2385,8 +2469,22 @@ Returns: ExtendedUser
 
 =back
 
-Updates the authenticating user's profile image.  Expects raw multipart
-data, not a URL to an image.
+Updates the authenticating user's profile image.  The C<image> parameter is an
+arrayref with the following interpretation:
+
+  [ $file ]
+  [ $file, $filename ]
+  [ $file, $filename, Content_Type => $mime_type ]
+  [ undef, $filename, Content_Type => $mime_type, Content => $raw_image_data ]
+
+The first value of the array (C<$file>) is the name of a file to open.  The
+second value (C<$filename>) is the name given to Twitter for the file.  If
+C<$filename> is not provided, the basename portion of C<$file> is used.  If
+C<$mime_type> is not provided, it will be provided automatically using
+L<LWP::MediaTypes::guess_media_type()>.
+
+C<$raw_image_data> can be provided, rather than opening a file, by passing
+C<undef> as the first array value.
 
 
 Returns: ExtendedUser
