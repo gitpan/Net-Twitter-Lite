@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.08002';
+our $VERSION = '0.08003';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -647,6 +647,16 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
         } ],
+        [ 'report_spam', {
+            aliases     => [ qw// ],
+            path        => 'report_spam',
+            method      => 'POST',
+            params      => [ qw/id user_id screen_name/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
         [ 'retweet', {
             aliases     => [ qw// ],
             path        => 'statuses/retweet/id',
@@ -1011,7 +1021,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.08002
+This document describes Net::Twitter::Lite version 0.08003
 
 =head1 SYNOPSIS
 
@@ -1283,7 +1293,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.08002 (Perl)".
+"Net::Twitter::Lite/0.08003 (Perl)".
 
 =item source
 
@@ -2125,6 +2135,25 @@ IP address.)
 
 
 Returns: RateLimitStatus
+
+=item B<report_spam>
+
+=item B<report_spam(id)>
+
+
+
+=over 4
+
+=item Parameters: id, user_id, screen_name
+
+=item Required: id
+
+=back
+
+The user specified in the id is blocked by the authenticated user and reported as a spammer.
+
+
+Returns: User
 
 =item B<retweet>
 
