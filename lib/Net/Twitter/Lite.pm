@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.08003';
+our $VERSION = '0.08004';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -19,6 +19,11 @@ sub new {
     my ($class, %args) = @_;
 
     my $ssl   = delete $args{ssl};
+    if ( $ssl ) {
+        eval { require Crypt::SSLeay } && $Crypt::SSLeay::VERSION >= 0.5
+            || croak "Crypt::SSLeay version 0.50 is required for SSL support";
+    }
+
     my $netrc = delete $args{netrc};
     my $new = bless {
         apiurl     => 'http://twitter.com',
@@ -155,7 +160,7 @@ for my $method ( qw/
 sub _get_auth_url {
     my ($self, $which_url, %params ) = @_;
 
-    $self->_request_request_token(%params) unless $self->request_token;
+    $self->_request_request_token(%params);
 
     my $uri = $self->$which_url;
     $uri->query_form(oauth_token => $self->request_token);
@@ -1021,7 +1026,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.08003
+This document describes Net::Twitter::Lite version 0.08004
 
 =head1 SYNOPSIS
 
@@ -1293,7 +1298,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.08003 (Perl)".
+"Net::Twitter::Lite/0.08004 (Perl)".
 
 =item source
 
@@ -1482,10 +1487,10 @@ the C<screen_name> or C<user_id> parameters, instead.
 
 For example, These calls are equivalent:
 
-    $nt->create_friend('net_twitter'); # screen name
+    $nt->create_friend('perl_api');    # screen name
     $nt->create_friend(1564061);       # numeric ID
-    $nt->create_friend({ id => 'net_twitter' });
-    $nt->create_friend({ screen_name => 'net_twitter' });
+    $nt->create_friend({ id => 'perl_api' });
+    $nt->create_friend({ screen_name => 'perl_api' });
     $nt->create_friend({ user_id     => 1564061 });
 
 However user_id 911 and screen_name 911 are separate Twitter accounts.  These
@@ -2840,7 +2845,7 @@ interface at L<https://rt.cpan.org/Dist/Display.html?Queue=Net-Twitter>.
 
 Join the Net::Twitter IRC channel at L<irc://irc.perl.org/net-twitter>.
 
-Follow net_twitter: L<http://twitter.com/net_twitter>.
+Follow perl_api: L<http://twitter.com/perl_api>.
 
 Track Net::Twitter::Lite development at L<http://github.com/semifor/net-twitter-lite>.
 
