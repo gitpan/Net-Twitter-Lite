@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.08004';
+our $VERSION = '0.08005';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -245,6 +245,8 @@ sub request_access_token {
     return (
         $self->access_token($res_param{oauth_token}),
         $self->access_token_secret($res_param{oauth_token_secret}),
+        $res_param{user_id},
+        $res_param{screen_name},
     );
 }
 
@@ -1026,7 +1028,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.08004
+This document describes Net::Twitter::Lite version 0.08005
 
 =head1 SYNOPSIS
 
@@ -1298,7 +1300,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.08004 (Perl)".
+"Net::Twitter::Lite/0.08005 (Perl)".
 
 =item source
 
@@ -1363,8 +1365,9 @@ Note that the credentials may be wrong and so the request may fail.
 
 =item request_access_token
 
-Request the access token and access token secret for this user. Takes a HASH of
-arguments. The C<verifier> argument is required.  See L</OAUTH EXAMPLES>.
+Returns list including the access token, access token secret, user_id, and
+screen_name for this user. Takes a HASH of arguments. The C<verifier> argument
+is required.  See L</OAUTH EXAMPLES>.
 
 The user must have authorized this app at the url given by C<get_authorization_url> first.
 
@@ -2756,7 +2759,8 @@ Here's how to authorize users as a desktop app mode:
       my $pin = <STDIN>; # wait for input
       chomp $pin;
 
-      my($access_token, $access_token_secret) = $nt->request_access_token(verifier => $pin);
+      my($access_token, $access_token_secret, $user_id, $screen_name) =
+          $nt->request_access_token(verifier => $pin);
       save_tokens($access_token, $access_token_secret); # if necessary
   }
 
@@ -2794,8 +2798,8 @@ secret to upgrade the request token to access token.
       $nt->request_token($cookie{token});
       $nt->request_token_secret($cookie{token_secret});
 
-      my($access_token, $access_token_secret)
-          = $nt->request_access_token;
+      my($access_token, $access_token_secret, $user_id, $screen_name) =
+          $nt->request_access_token;
 
       # Save $access_token and $access_token_secret in the database associated with $c->user
   }
