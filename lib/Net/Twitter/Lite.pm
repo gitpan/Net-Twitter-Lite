@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.08005';
+our $VERSION = '0.08006';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -26,7 +26,7 @@ sub new {
 
     my $netrc = delete $args{netrc};
     my $new = bless {
-        apiurl     => 'http://twitter.com',
+        apiurl     => 'http://api.twitter.com/1',
         apirealm   => 'Twitter API',
         $args{identica} ? ( apiurl => 'http://identi.ca/api' ) : (),
         searchurl  => 'http://search.twitter.com',
@@ -43,6 +43,7 @@ sub new {
             authorization_url  => "http://twitter.com/oauth/authorize",
             access_token_url   => "http://twitter.com/oauth/access_token",
         },
+        netrc_machine => 'api.twitter.com',
         %args
     }, $class;
 
@@ -53,7 +54,7 @@ sub new {
         eval { require Net::Netrc; 1 }
             || croak "Net::Netrc is required for the netrc option";
 
-        my $host = URI->new($new->{apiurl})->host;
+        my $host = $netrc eq '1' ? $new->{netrc_machine} : $netrc;
         my $nrc = Net::Netrc->lookup($host)
             || croak "No .netrc entry for $host";
 
@@ -686,7 +687,7 @@ my $api_def = [
         } ],
         [ 'retweeted_of_me', {
             aliases     => [ qw// ],
-            path        => 'statuses/retweeted_by_me',
+            path        => 'statuses/retweeted_of_me',
             method      => 'GET',
             params      => [ qw/since_id max_id count page/ ],
             required    => [ qw// ],
@@ -696,7 +697,7 @@ my $api_def = [
         } ],
         [ 'retweeted_to_me', {
             aliases     => [ qw// ],
-            path        => 'statuses/retweeted_by_me',
+            path        => 'statuses/retweeted_to_me',
             method      => 'GET',
             params      => [ qw/since_id max_id count page/ ],
             required    => [ qw// ],
@@ -784,11 +785,31 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
         } ],
+        [ 'trends_available', {
+            aliases     => [ qw// ],
+            path        => 'trends/available',
+            method      => 'GET',
+            params      => [ qw/lat long/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'trends_location', {
+            aliases     => [ qw// ],
+            path        => 'trends/location',
+            method      => 'GET',
+            params      => [ qw/woeid/ ],
+            required    => [ qw/woeid/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
         [ 'update', {
             aliases     => [ qw// ],
             path        => 'statuses/update',
             method      => 'POST',
-            params      => [ qw/status in_reply_to_status_id/ ],
+            params      => [ qw/status lat long in_reply_to_status_id/ ],
             required    => [ qw/status/ ],
             add_source  => 1,
             deprecated  => 0,
@@ -860,6 +881,16 @@ my $api_def = [
             method      => 'GET',
             params      => [ qw/id user_id screen_name since_id max_id count page/ ],
             required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+        } ],
+        [ 'users_search', {
+            aliases     => [ qw/find_people search_users/ ],
+            path        => 'users/search',
+            method      => 'GET',
+            params      => [ qw/q per_page page/ ],
+            required    => [ qw/q/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
@@ -1028,7 +1059,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.08005
+This document describes Net::Twitter::Lite version 0.08006
 
 =head1 SYNOPSIS
 
@@ -1065,6 +1096,18 @@ not to install L<Moose> and its dependencies.
 You should consider upgrading to C<Net::Twitter> for additional functionality,
 finer grained control over features, full backwards compatibility with older
 versions of C<Net::Twitter>, and additional error handling options.
+
+=head1 CLIENT CODE CHANGES REQUIRED
+
+The default C<apiurl> changed in version 0.08006.  The change should be
+transparent to client code, unless you're using the C<netrc> option.  If so,
+you'll need to either update the C<.netrc> entry and change the C<machine>
+value from C<twitter.com> to C<api.twitter.com>, or set either the C<netrc>
+or C<netrc_machine> options to C<twitter.com>.
+
+    $nt = Net::Twitter::Lite->new(netrc_machine => 'twitter.com', netrc => 1);
+    # -or-
+    $nt = Net::Twitter::Lite->new(netrc => 'twitter.com');
 
 =head1 IMPORTANT
 
@@ -1300,7 +1343,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.08005 (Perl)".
+"Net::Twitter::Lite/0.08006 (Perl)".
 
 =item source
 
@@ -1327,16 +1370,26 @@ If set to 1, an SSL connection will be used for all API calls. Defaults to 0.
 
 =item netrc
 
-If set to 1, Net::Twitter::Lite will look up the host portion of the C<apiurl>
-in the C<.netrc> file to obtain the uC<username> and C<password> arguments.
+(Optional) Sets the I<machine> key to look up in C<.netrc> to obtain
+credentials. If set to 1, Net::Twitter::Lite will use the value of the C<netrc_machine>
+option (below).
 
    # in .netrc
-   machine twitter.com
-   login YOUR_TWITTER_USER_NAME
-   password YOUR_TWITTER_PASSWORD
+   machine api.twitter.com
+     login YOUR_TWITTER_USER_NAME
+     password YOUR_TWITTER_PASSWORD
+   machine semifor.twitter.com
+     login semifor
+     password SUPERSECRET
 
    # in your perl program
    $nt = Net::Twitter::Lite->new(netrc => 1);
+   $nt = Net::Twitter::Lite->new(netrc => 'semifor.twitter.com');
+
+=item netrc_machine
+
+(Optional) Sets the C<machine> entry to look up in C<.netrc> when C<<netrc => 1>>
+is used.  Defaults to C<api.twitter.com>.
 
 =back
 
@@ -2389,6 +2442,57 @@ Returns the string "ok" status code.
 
 Returns: Str
 
+=item B<trends_available>
+
+
+
+=over 4
+
+=item Parameters: lat, long
+
+=item Required: I<none>
+
+=back
+
+Returns the locations with trending topic information. The response is an
+array of "locations" that encode the location's WOEID (a Yahoo!  Where On Earth
+ID L<http://developer.yahoo.com/geo/geoplanet/>) and some other human-readable
+information such as a the location's canonical name and country.
+
+When the optional C<lat> and C<long> parameters are passed, the available trend
+locations are sorted by distance from that location, nearest to farthest.
+
+Use the WOEID returned in the location object to query trends for a specific
+location.
+
+
+Returns: ArrayRef[Location]
+
+=item B<trends_location>
+
+=item B<trends_location(woeid)>
+
+
+
+=over 4
+
+=item Parameters: woeid
+
+=item Required: woeid
+
+=back
+
+Returns the top 10 trending topics for a specific location. The response is an
+array of "trend" objects that encode the name of the trending topic, the query
+parameter that can be used to search for the topic on Search, and the direct
+URL that can be issued against Search.  This information is cached for five
+minutes, and therefore users are discouraged from querying these endpoints
+faster than once every five minutes.  Global trends information is also
+available from this API by using a WOEID of 1.
+
+
+Returns: ArrayRef[Trend]
+
 =item B<update>
 
 =item B<update(status)>
@@ -2397,7 +2501,7 @@ Returns: Str
 
 =over 4
 
-=item Parameters: status, in_reply_to_status_id
+=item Parameters: status, lat, long, in_reply_to_status_id
 
 =item Required: status
 
@@ -2406,6 +2510,11 @@ Returns: Str
 Updates the authenticating user's status.  Requires the status parameter
 specified.  A status update with text identical to the authenticating
 user's current status will be ignored.
+
+The optional C<lat> and C<long> parameters add location data to the status for
+a geo enabled account. They expect values in the ranges -90.0 to +90.0 and
+-180.0 to +180.0 respectively.  They are ignored unless the user's
+C<geo_enabled> field is true.
 
 
 Returns: Status
@@ -2546,6 +2655,32 @@ your own user, or the profile page for a third party.
 
 Returns: ArrayRef[Status]
 
+=item B<users_search>
+
+=item B<users_search(q)>
+
+
+=item alias: find_people
+
+=item alias: search_users
+
+
+=over 4
+
+=item Parameters: q, per_page, page
+
+=item Required: q
+
+=back
+
+Run a search for users similar to Find People button on Twitter.com; the same
+results returned by people search on Twitter.com will be returned by using this
+API (about being listed in the People Search).  It is only possible to retrieve
+the first 1000 matches from this API.
+
+
+Returns: ArrayRef[Users]
+
 =item B<verify_credentials>
 
 
@@ -2591,10 +2726,17 @@ Returns: ExtendedUser
 
 =back
 
-Returns tweets that match a specified query.  You can use a variety of search operators in your query.
+Returns a HASH reference with some meta-data about the query including the
+C<next_page>, C<refresh_url>, and C<max_id>. The statuses are returned in
+C<results>.  To iterate over the results, use something similar to:
+
+    my $r = $nt->search($searh_term);
+    for my $status ( @{$r->{results}} ) {
+        print "$status->{text}\n";
+    }
 
 
-Returns: ArrayRef[Status]
+Returns: HashRef
 
 =item B<trends>
 
