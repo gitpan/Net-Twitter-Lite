@@ -1,6 +1,6 @@
 use inc::Module::Install;
 
-version '0.08006';
+version '0.09000';
 
 if ( $Module::Install::AUTHOR ) {
     eval "use Net::Twitter::Core";
@@ -31,7 +31,7 @@ requires    'LWP::UserAgent' => 2.032;
 
 feature 'OAuth Authentication',
     -default     => 1,
-    'Net::OAuth' => '0.16',
+    'Net::OAuth' => '0.25',
     ;
 
 feature '.netrc support',
