@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.09001';
+our $VERSION = '0.09002_02';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -18,18 +18,14 @@ my $json_handler = JSON::Any->new(utf8 => 1);
 sub new {
     my ($class, %args) = @_;
 
-    my $ssl   = delete $args{ssl};
-    if ( $ssl ) {
-        eval { require Crypt::SSLeay } && $Crypt::SSLeay::VERSION >= 0.5
-            || croak "Crypt::SSLeay version 0.50 is required for SSL support";
-    }
-
     my $netrc = delete $args{netrc};
     my $new = bless {
-        apiurl     => 'http://api.twitter.com/1',
+        apiurl                => 'http://api.twitter.com/1',
+        searchapiurl          => 'http://search.twitter.com',
+        search_trends_api_url => 'http://api.twitter.com/1',
+        lists_api_url         => 'http://api.twitter.com/1',
         apirealm   => 'Twitter API',
         $args{identica} ? ( apiurl => 'http://identi.ca/api' ) : (),
-        searchurl  => 'http://search.twitter.com',
         useragent  => __PACKAGE__ . "/$VERSION (Perl)",
         clientname => __PACKAGE__,
         clientver  => $VERSION,
@@ -48,7 +44,14 @@ sub new {
         %args
     }, $class;
 
-    $new->{apiurl} =~ s/http/https/ if $ssl;
+
+    if ( delete $args{ssl} ) {
+        eval { require Crypt::SSLeay } && $Crypt::SSLeay::VERSION >= 0.5
+            || croak "Crypt::SSLeay version 0.50 is required for SSL support";
+
+        $new->{$_} =~ s/http/https/
+            for qw/apiurl searchurl search_trends_api_url lists_api_url/;
+    }
 
     # get username and password from .netrc
     if ( $netrc ) {
@@ -114,7 +117,7 @@ sub _oauth {
 
         eval '$Net::OAuth::PROTOCOL_VERSION = Net::OAuth::PROTOCOL_VERSION_1_0A';
         die $@ if $@;
-        
+
         'Net::OAuth';
     };
 }
@@ -136,7 +139,7 @@ for my $method ( qw/
     no strict 'refs';
     *{__PACKAGE__ . "::$method"} = sub {
         my $self = shift;
-        
+
         $self->{$method} = shift if @_;
         return $self->{$method};
     };
@@ -302,7 +305,7 @@ sub _encode_args {
 
 sub _oauth_authenticated_request {
     my ($self, $http_method, $uri, $args, $authenticate) = @_;
-    
+
     delete $args->{source}; # not necessary with OAuth requests
 
     my $is_multipart = grep { ref } %$args;
@@ -384,6 +387,8 @@ sub _mk_post_msg {
          : POST($uri, $args);
 }
 
+{ ### scope $api_def
+
 my $api_def = [
     [ REST => [
         [ 'block_exists', {
@@ -396,6 +401,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'blocking', {
             aliases     => [ qw// ],
@@ -407,6 +413,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'blocking_ids', {
             aliases     => [ qw// ],
@@ -418,6 +425,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'create_block', {
             aliases     => [ qw// ],
@@ -429,6 +437,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'create_favorite', {
             aliases     => [ qw// ],
@@ -440,6 +449,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'create_friend', {
             aliases     => [ qw/follow_new/ ],
@@ -451,6 +461,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'create_saved_search', {
             aliases     => [ qw// ],
@@ -462,6 +473,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'destroy_block', {
             aliases     => [ qw// ],
@@ -473,6 +485,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'destroy_direct_message', {
             aliases     => [ qw// ],
@@ -484,6 +497,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'destroy_favorite', {
             aliases     => [ qw// ],
@@ -495,6 +509,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'destroy_friend', {
             aliases     => [ qw/unfollow/ ],
@@ -506,6 +521,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'destroy_saved_search', {
             aliases     => [ qw// ],
@@ -517,6 +533,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'destroy_status', {
             aliases     => [ qw// ],
@@ -528,6 +545,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'direct_messages', {
             aliases     => [ qw// ],
@@ -539,6 +557,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'disable_notifications', {
             aliases     => [ qw// ],
@@ -550,6 +569,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'downtime_schedule', {
             aliases     => [ qw// ],
@@ -561,6 +581,7 @@ my $api_def = [
             deprecated  => 1,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'enable_notifications', {
             aliases     => [ qw// ],
@@ -572,6 +593,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'end_session', {
             aliases     => [ qw// ],
@@ -583,6 +605,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'favorites', {
             aliases     => [ qw// ],
@@ -594,6 +617,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'followers', {
             aliases     => [ qw// ],
@@ -605,6 +629,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'followers_ids', {
             aliases     => [ qw// ],
@@ -616,6 +641,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'friends', {
             aliases     => [ qw/following/ ],
@@ -627,6 +653,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'friends_ids', {
             aliases     => [ qw/following_ids/ ],
@@ -638,6 +665,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'friends_timeline', {
             aliases     => [ qw/following_timeline/ ],
@@ -649,6 +677,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw/skip_user/ ],
+        base_url_method => 'apiurl',
         } ],
         [ 'friendship_exists', {
             aliases     => [ qw/relationship_exists follows/ ],
@@ -660,6 +689,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'friendships_incoming', {
             aliases     => [ qw// ],
@@ -671,6 +701,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'friendships_outgoing', {
             aliases     => [ qw// ],
@@ -682,6 +713,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'geo_id', {
             aliases     => [ qw// ],
@@ -693,6 +725,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'home_timeline', {
             aliases     => [ qw// ],
@@ -704,6 +737,19 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw/skip_user/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'lookup_users', {
+            aliases     => [ qw// ],
+            path        => 'users/lookup',
+            method      => 'GET',
+            params      => [ qw/user_id screen_name/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'mentions', {
             aliases     => [ qw/replies/ ],
@@ -715,6 +761,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'new_direct_message', {
             aliases     => [ qw// ],
@@ -726,6 +773,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'public_timeline', {
             aliases     => [ qw// ],
@@ -737,6 +785,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw/skip_user/ ],
+        base_url_method => 'apiurl',
         } ],
         [ 'rate_limit_status', {
             aliases     => [ qw// ],
@@ -748,6 +797,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'report_spam', {
             aliases     => [ qw// ],
@@ -759,6 +809,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'retweet', {
             aliases     => [ qw// ],
@@ -770,6 +821,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by', {
             aliases     => [ qw// ],
@@ -781,6 +833,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by_ids', {
             aliases     => [ qw// ],
@@ -792,6 +845,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by_me', {
             aliases     => [ qw// ],
@@ -803,6 +857,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'retweeted_to_me', {
             aliases     => [ qw// ],
@@ -814,6 +869,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'retweets', {
             aliases     => [ qw// ],
@@ -825,6 +881,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'retweets_of_me', {
             aliases     => [ qw/retweeted_of_me/ ],
@@ -836,6 +893,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'reverse_geocode', {
             aliases     => [ qw// ],
@@ -847,6 +905,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'saved_searches', {
             aliases     => [ qw// ],
@@ -858,6 +917,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'sent_direct_messages', {
             aliases     => [ qw// ],
@@ -869,6 +929,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'show_friendship', {
             aliases     => [ qw/show_relationship/ ],
@@ -880,6 +941,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'show_saved_search', {
             aliases     => [ qw// ],
@@ -891,6 +953,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'show_status', {
             aliases     => [ qw// ],
@@ -902,6 +965,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'show_user', {
             aliases     => [ qw// ],
@@ -913,6 +977,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'test', {
             aliases     => [ qw// ],
@@ -924,6 +989,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'trends_available', {
             aliases     => [ qw// ],
@@ -935,6 +1001,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'trends_location', {
             aliases     => [ qw// ],
@@ -946,6 +1013,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'update', {
             aliases     => [ qw// ],
@@ -957,6 +1025,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw/display_coordinates/ ],
+        base_url_method => 'apiurl',
         } ],
         [ 'update_delivery_device', {
             aliases     => [ qw// ],
@@ -968,6 +1037,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'update_location', {
             aliases     => [ qw// ],
@@ -979,6 +1049,7 @@ my $api_def = [
             deprecated  => 1,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'update_profile', {
             aliases     => [ qw// ],
@@ -990,6 +1061,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'update_profile_background_image', {
             aliases     => [ qw// ],
@@ -1001,6 +1073,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'update_profile_colors', {
             aliases     => [ qw// ],
@@ -1012,6 +1085,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'update_profile_image', {
             aliases     => [ qw// ],
@@ -1023,6 +1097,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'user_timeline', {
             aliases     => [ qw// ],
@@ -1034,6 +1109,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw/skip_user/ ],
+        base_url_method => 'apiurl',
         } ],
         [ 'users_search', {
             aliases     => [ qw/find_people search_users/ ],
@@ -1045,6 +1121,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
         [ 'verify_credentials', {
             aliases     => [ qw// ],
@@ -1056,6 +1133,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
         } ],
     ] ],
     [ Search => [
@@ -1069,6 +1147,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 0,
             booleans    => [ qw// ],
+        base_url_method => 'searchapiurl',
         } ],
         [ 'trends', {
             aliases     => [ qw// ],
@@ -1080,6 +1159,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 0,
             booleans    => [ qw// ],
+        base_url_method => 'search_trends_api_url',
         } ],
         [ 'trends_current', {
             aliases     => [ qw// ],
@@ -1091,6 +1171,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 0,
             booleans    => [ qw// ],
+        base_url_method => 'search_trends_api_url',
         } ],
         [ 'trends_daily', {
             aliases     => [ qw// ],
@@ -1102,6 +1183,7 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 0,
             booleans    => [ qw// ],
+        base_url_method => 'search_trends_api_url',
         } ],
         [ 'trends_weekly', {
             aliases     => [ qw// ],
@@ -1113,6 +1195,201 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 0,
             booleans    => [ qw// ],
+        base_url_method => 'search_trends_api_url',
+        } ],
+    ] ],
+    [ Lists => [
+        [ 'add_list_member', {
+            aliases     => [ qw// ],
+            path        => ':user/:list_id/members',
+            method      => 'POST',
+            params      => [ qw/user list_id id/ ],
+            required    => [ qw/user list_id id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'create_list', {
+            aliases     => [ qw// ],
+            path        => ':user/lists',
+            method      => 'POST',
+            params      => [ qw/user name mode description/ ],
+            required    => [ qw/user name/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'delete_list', {
+            aliases     => [ qw// ],
+            path        => ':user/lists/:list_id',
+            method      => 'DELETE',
+            params      => [ qw/user list_id/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'delete_list_member', {
+            aliases     => [ qw/remove_list_member/ ],
+            path        => ':user/:list_id/members',
+            method      => 'DELETE',
+            params      => [ qw/user list_id id/ ],
+            required    => [ qw/user list_id id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'get_list', {
+            aliases     => [ qw// ],
+            path        => ':user/lists/:list_id',
+            method      => 'GET',
+            params      => [ qw/user list_id/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'get_lists', {
+            aliases     => [ qw/list_lists/ ],
+            path        => ':user/lists',
+            method      => 'GET',
+            params      => [ qw/user cursor/ ],
+            required    => [ qw/user/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'is_list_member', {
+            aliases     => [ qw// ],
+            path        => ':user/:list_id/members/:id',
+            method      => 'GET',
+            params      => [ qw/user list_id id/ ],
+            required    => [ qw/user list_id id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'is_list_subscriber', {
+            aliases     => [ qw/is_subscribed_list/ ],
+            path        => ':user/:list_id/subscribers/:id',
+            method      => 'GET',
+            params      => [ qw/user list_id id/ ],
+            required    => [ qw/user list_id id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'list_members', {
+            aliases     => [ qw// ],
+            path        => ':user/:list_id/members',
+            method      => 'GET',
+            params      => [ qw/user list_id id cursor/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'list_memberships', {
+            aliases     => [ qw// ],
+            path        => ':user/lists/memberships',
+            method      => 'GET',
+            params      => [ qw/user cursor/ ],
+            required    => [ qw/user/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'list_statuses', {
+            aliases     => [ qw// ],
+            path        => ':user/lists/:list_id/statuses',
+            method      => 'GET',
+            params      => [ qw/user list_id since_id max_id per_page page/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'list_subscribers', {
+            aliases     => [ qw// ],
+            path        => ':user/:list_id/subscribers',
+            method      => 'GET',
+            params      => [ qw/user list_id id cursor/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'list_subscriptions', {
+            aliases     => [ qw// ],
+            path        => ':user/lists/subscriptions',
+            method      => 'GET',
+            params      => [ qw/user cursor/ ],
+            required    => [ qw/user/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'subscribe_list', {
+            aliases     => [ qw// ],
+            path        => ':user/:list_id/subscribers',
+            method      => 'POST',
+            params      => [ qw/user list_id/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'unsubscribe_list', {
+            aliases     => [ qw// ],
+            path        => ':user/:list_id/subscribers',
+            method      => 'DELETE',
+            params      => [ qw/user list_id/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'update_list', {
+            aliases     => [ qw// ],
+            path        => ':user/lists/:list_id',
+            method      => 'POST',
+            params      => [ qw/user list_id name mode description/ ],
+            required    => [ qw/user list_id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
         } ],
     ] ],
 ];
@@ -1134,10 +1411,6 @@ while ( @$api_def ) {
     my $api_name = shift @$api;
     my $methods = shift @$api;
 
-    my $url_attr = $api_name eq 'REST' ? 'apiurl' : 'searchurl';
-
-    my $base_url = sub { shift->{$url_attr} };
-
     for my $method ( @$methods ) {
         my $name    = shift @$method;
         my %options = %{ shift @$method };
@@ -1153,10 +1426,17 @@ while ( @$api_def ) {
             # copy callers args since we may add ->{source}
             my $args = ref $_[-1] eq 'HASH' ? { %{pop @_} } : {};
 
-            if ( @_ ) {
-                @_ == @$arg_names || croak "$name expected @{[ scalar @$arg_names ]} args";
-                @{$args}{@$arg_names} = @_;
+            croak sprintf "$name expected %d args", scalar @$arg_names if @_ > @$arg_names;
+
+            # promote positional args to named args
+            for ( my $i = 0; @_; ++$i ) {
+                my $param = $arg_names->[$i];
+                croak "duplicate param $param: both positional and named"
+                    if exists $args->{$param};
+
+                $args->{$param} = shift;
             }
+
             $args->{source} ||= $self->{source} if $options{add_source};
 
             my $authenticate = exists $args->{authenticate}  ? delete $args->{authenticate}
@@ -1179,7 +1459,7 @@ while ( @$api_def ) {
             $local_path =~ s,/:id$,, unless exists $args->{id}; # remove optional trailing id
             $local_path =~ s/:(\w+)/delete $args->{$1} or croak "required arg '$1' missing"/eg;
 
-            my $uri = URI->new($base_url->($self) . "/$local_path.json");
+            my $uri = URI->new($self->{$options{base_url_method}} . "/$local_path.json");
 
             return $self->_parse_result(
                 $self->_authenticated_request($options{method}, $uri, $args, $authenticate)
@@ -1190,6 +1470,53 @@ while ( @$api_def ) {
         *{__PACKAGE__ . "::$_"} = $code for $name, @{$options{aliases}};
     }
 }
+$DB::single = 1;
+
+# catch expected error and promote it to an undef
+for ( qw/list_members is_list_member list_subscribers is_list_subscriber/ ) {
+    my $orig = __PACKAGE__->can($_) or die;
+
+    my $code = sub {
+        my $r = eval { $orig->(@_) };
+        if ( $@ ) {
+            return if $@ =~ /The specified user is not a (?:memb|subscrib)er of this list/;
+
+            die $@;
+        }
+
+        return $r;
+    };
+
+    no strict 'refs';
+    no warnings 'redefine';
+    *{__PACKAGE__ . "::$_"} = $code;
+}
+
+# special case parameter handling for lookup_users
+for ( qw/lookup_users/ ) {
+    my $orig = __PACKAGE__->can($_) or die;
+
+    my $code = sub {
+        my $self = shift;
+
+        my $args = ref $_[-1] eq 'HASH' ? pop @_ : {};
+        $args = { %$args, @_ };
+
+        for ( qw/screen_name user_id/ ) {
+            $args->{$_} = join(',' => @{ $args->{$_} }) if ref $args->{$_} eq 'ARRAY';
+        }
+
+        return $orig->($self, $args);
+    };
+
+    no strict 'refs';
+    no warnings 'redefine';
+    *{__PACKAGE__ . "::$_"} = $code;
+}
+
+
+
+} ### end scope for $api_def
 
 sub _from_json {
     my ($self, $json) = @_;
@@ -1230,7 +1557,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.09001
+This document describes Net::Twitter::Lite version 0.09002_02
 
 =head1 SYNOPSIS
 
@@ -1515,7 +1842,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.09001 (Perl)".
+"Net::Twitter::Lite/0.09002_02 (Perl)".
 
 =item source
 
@@ -2349,6 +2676,43 @@ authenticating user and that user's friends. This is the equivalent of
 
 
 Returns: ArrayRef[Status]
+
+=item B<lookup_users>
+
+
+
+=over 4
+
+=item Parameters: user_id, screen_name
+
+=item Required: I<none>
+
+=back
+
+Return up to 20 users worth of extended information, specified by either ID,
+screen name, or combination of the two. The author's most recent status (if the
+authenticating user has permission) will be returned inline.  This method is
+rate limited to 1000 calls per hour.
+
+This method will accept user IDs or screen names as either a comma delimited
+string, or as an ARRAY ref.  It will also accept arguments in the normal
+HASHREF form or as a simple list of named arguments.  I.e., any of the
+following forms are acceptable:
+
+    $nt->lookup_users({ user_id => '1234,6543,3333' });
+    $nt->lookup_users(user_id => '1234,6543,3333');
+    $nt->lookup_users({ user_id => [ 1234, 6543, 3333 ] });
+    $nt->lookup_users({ screen_name => 'fred,barney,wilma' });
+    $nt->lookup_users(screen_name => ['fred', 'barney', 'wilma']);
+
+    $nt->lookup_users(
+        screen_name => ['fred', 'barney' ],
+        user_id     => '4321,6789',
+    );
+
+
+
+Returns: ArrayRef[User]
 
 =item B<mentions>
 
@@ -3199,6 +3563,356 @@ Returns: HashRef
 =back
 
 Returns the top 30 trending topics for each day in a given week.
+
+
+Returns: HashRef
+
+
+=back
+
+
+
+=head1 Lists API Methods
+
+
+
+=over 4
+
+=item B<add_list_member>
+
+=item B<add_list_member(user, list_id, id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id, id
+
+=item Required: user, list_id, id
+
+=back
+
+Adds the user identified by C<id> to the list.
+
+Returns a reference the added user as a hash reference.
+
+
+Returns: User
+
+=item B<create_list>
+
+=item B<create_list(user, name)>
+
+
+
+=over 4
+
+=item Parameters: user, name, mode, description
+
+=item Required: user, name
+
+=back
+
+Creates a new list for the authenticated user. The C<mode> parameter may be
+either C<public> or C<private>.  If not specified, it defaults to C<public>.
+
+
+Returns: HashRef
+
+=item B<delete_list>
+
+=item B<delete_list(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id
+
+=item Required: user, list_id
+
+=back
+
+Deletes a list owned by the authenticating user. Returns the list as a hash
+reference.
+
+
+Returns: 
+
+=item B<delete_list_member>
+
+=item B<delete_list_member(user, list_id, id)>
+
+
+=item alias: remove_list_member
+
+
+=over 4
+
+=item Parameters: user, list_id, id
+
+=item Required: user, list_id, id
+
+=back
+
+Deletes the user identified by C<id> from the specified list.
+
+Returns the deleted user as a hash reference.
+
+
+Returns: 
+
+=item B<get_list>
+
+=item B<get_list(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id
+
+=item Required: user, list_id
+
+=back
+
+Returns the specified list as a hash reference.
+
+
+Returns: HashRef
+
+=item B<get_lists>
+
+=item B<get_lists(user)>
+
+
+=item alias: list_lists
+
+
+=over 4
+
+=item Parameters: user, cursor
+
+=item Required: user
+
+=back
+
+Returns a reference to an array of lists owned by the specified user.  If the
+user is the authenticated user, it returns both public and private lists.
+Otherwise, it only returns public lists.
+
+When the C<cursor> parameter is used, a hash reference is returned; the lists
+are returned in the C<lists> element of the hash.
+
+
+Returns: ArrayRef[List]
+
+=item B<is_list_member>
+
+=item B<is_list_member(user, list_id, id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id, id
+
+=item Required: user, list_id, id
+
+=back
+
+Returns the list member as a HASH reference if C<id> is a member of the list.
+Otherwise, returns undef.
+
+
+Returns: ArrayRef[User]
+
+=item B<is_list_subscriber>
+
+=item B<is_list_subscriber(user, list_id, id)>
+
+
+=item alias: is_subscribed_list
+
+
+=over 4
+
+=item Parameters: user, list_id, id
+
+=item Required: user, list_id, id
+
+=back
+
+Returns the subscriber as a HASH reference if C<id> is a subscriber to the list.
+Otherwise, returns undef.
+
+
+Returns: ArrayRef[User]
+
+=item B<list_members>
+
+=item B<list_members(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id, id, cursor
+
+=item Required: user, list_id
+
+=back
+
+Returns the list members as an array reference.
+
+The optional C<id> parameter can be used to determine if the user specified by
+C<id> is a member of the list.  If so, the user is returned as a hash
+reference; if not, C<undef> is returned.
+
+When the C<cursor> parameter is used, a hash reference is returned; the members
+are returned in the C<users> element of the hash.
+
+
+Returns: ArrayRef[User]
+
+=item B<list_memberships>
+
+=item B<list_memberships(user)>
+
+
+
+=over 4
+
+=item Parameters: user, cursor
+
+=item Required: user
+
+=back
+
+Returns the lists the specified user is a member of as an array reference.
+
+When the C<cursor> parameter is used, a hash reference is returned; the lists
+are returned in the C<lists> element of the hash.
+
+
+Returns: 
+
+=item B<list_statuses>
+
+=item B<list_statuses(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id, since_id, max_id, per_page, page
+
+=item Required: user, list_id
+
+=back
+
+Returns a timeline of list member statuses as an array reference.
+
+
+Returns: ArrayRef[Status]
+
+=item B<list_subscribers>
+
+=item B<list_subscribers(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id, id, cursor
+
+=item Required: user, list_id
+
+=back
+
+Returns the subscribers to a list as an array reference.
+
+When the C<cursor> parameter is used, a hash reference is returned; the subscribers
+are returned in the C<users> element of the hash.
+
+
+Returns: ArrayRef[User]
+
+=item B<list_subscriptions>
+
+=item B<list_subscriptions(user)>
+
+
+
+=over 4
+
+=item Parameters: user, cursor
+
+=item Required: user
+
+=back
+
+Returns a lists to which the specified user is subscribed as an array reference.
+
+When the C<cursor> parameter is used, a hash reference is returned; the lists
+are returned in the C<lists> element of the hash.
+
+
+Returns: 
+
+=item B<subscribe_list>
+
+=item B<subscribe_list(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id
+
+=item Required: user, list_id
+
+=back
+
+Subscribes the authenticated user to the specified list.
+
+
+Returns: List
+
+=item B<unsubscribe_list>
+
+=item B<unsubscribe_list(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id
+
+=item Required: user, list_id
+
+=back
+
+Unsubscribes the authenticated user from the specified list.
+
+
+Returns: List
+
+=item B<update_list>
+
+=item B<update_list(user, list_id)>
+
+
+
+=over 4
+
+=item Parameters: user, list_id, name, mode, description
+
+=item Required: user, list_id
+
+=back
+
+Updates a list to change the name, mode, description, or any combination thereof.
 
 
 Returns: HashRef

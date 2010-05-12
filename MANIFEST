@@ -25,6 +25,7 @@ src/net-twitter-lite.tt2
 t/00_load.t
 t/01_basic.t
 t/02_regression.t
+t/60-api_lists.t
 t/99-pod_coverage.t
 t/99-pod_spelling.t
 t/99-pod_syntax.t
