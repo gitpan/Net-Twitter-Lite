@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.09002_02';
+our $VERSION = '0.09002_03';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -363,12 +363,15 @@ sub _basic_authenticated_request {
     _encode_args($args);
 
     my $msg;
-    if ( $http_method eq 'GET' ) {
+    if ( $http_method =~ /^(?:GET|DELETE)$/ ) {
         $uri->query_form($args);
-        $msg = GET($uri);
+        $msg = HTTP::Request->new($http_method, $uri);
     }
     elsif ( $http_method eq 'POST' ) {
         $msg = $self->_mk_post_msg($uri, $args);
+    }
+    else {
+        croak "unexpected HTTP method: $http_method";
     }
 
     if ( $authenticate && $self->{username} && $self->{password} ) {
@@ -1557,7 +1560,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.09002_02
+This document describes Net::Twitter::Lite version 0.09002_03
 
 =head1 SYNOPSIS
 
@@ -1842,7 +1845,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.09002_02 (Perl)".
+"Net::Twitter::Lite/0.09002_03 (Perl)".
 
 =item source
 
