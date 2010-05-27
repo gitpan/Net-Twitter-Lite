@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.10002';
+our $VERSION = '0.10003';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -1559,7 +1559,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.10002
+This document describes Net::Twitter::Lite version 0.10003
 
 =head1 SYNOPSIS
 
@@ -1844,7 +1844,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.10002 (Perl)".
+"Net::Twitter::Lite/0.10003 (Perl)".
 
 =item source
 
