@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.10001';
+our $VERSION = '0.10002';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -49,8 +49,8 @@ sub new {
         eval { require Crypt::SSLeay } && $Crypt::SSLeay::VERSION >= 0.5
             || croak "Crypt::SSLeay version 0.50 is required for SSL support";
 
-        $new->{$_} =~ s/http/https/
-            for qw/apiurl searchurl search_trends_api_url lists_api_url/;
+        $new->{$_} =~ s/^http:/https:/
+            for qw/apiurl searchapiurl search_trends_api_url lists_api_url/;
     }
 
     # get username and password from .netrc
@@ -1473,7 +1473,6 @@ while ( @$api_def ) {
         *{__PACKAGE__ . "::$_"} = $code for $name, @{$options{aliases}};
     }
 }
-$DB::single = 1;
 
 # catch expected error and promote it to an undef
 for ( qw/list_members is_list_member list_subscribers is_list_subscriber/ ) {
@@ -1560,7 +1559,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.10001
+This document describes Net::Twitter::Lite version 0.10002
 
 =head1 SYNOPSIS
 
@@ -1845,7 +1844,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.10001 (Perl)".
+"Net::Twitter::Lite/0.10002 (Perl)".
 
 =item source
 
