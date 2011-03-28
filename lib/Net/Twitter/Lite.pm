@@ -3,7 +3,7 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.10003';
+our $VERSION = '0.10004';
 $VERSION = eval { $VERSION };
 
 use Carp;
@@ -34,10 +34,10 @@ sub new {
         useragent_class => 'LWP::UserAgent',
         useragent_args  => {},
         oauth_urls => {
-            request_token_url  => "http://twitter.com/oauth/request_token",
-            authentication_url => "http://twitter.com/oauth/authenticate",
-            authorization_url  => "http://twitter.com/oauth/authorize",
-            access_token_url   => "http://twitter.com/oauth/access_token",
+            request_token_url  => "https://twitter.com/oauth/request_token",
+            authentication_url => "https://twitter.com/oauth/authenticate",
+            authorization_url  => "https://twitter.com/oauth/authorize",
+            access_token_url   => "https://twitter.com/oauth/access_token",
             xauth_url          => "https://twitter.com/oauth/access_token",
         },
         netrc_machine => 'api.twitter.com',
@@ -46,9 +46,6 @@ sub new {
 
 
     if ( delete $args{ssl} ) {
-        eval { require Crypt::SSLeay } && $Crypt::SSLeay::VERSION >= 0.5
-            || croak "Crypt::SSLeay version 0.50 is required for SSL support";
-
         $new->{$_} =~ s/^http:/https:/
             for qw/apiurl searchapiurl search_trends_api_url lists_api_url/;
     }
@@ -323,8 +320,8 @@ sub _oauth_authenticated_request {
             extra_params   => $is_multipart ? {} : $args,
         );
 
-        if ( $http_method eq 'GET' ) {
-            $msg = GET($request->to_url);
+        if ( $http_method =~ /^(?:GET|DELETE)$/ ) {
+            $msg = HTTP::Request->new($http_method, $request->to_url);
         }
         elsif ( $http_method eq 'POST' ) {
             $msg = $is_multipart
@@ -394,9 +391,33 @@ sub _mk_post_msg {
 
 my $api_def = [
     [ REST => [
-        [ 'block_exists', {
+        [ 'account_settings', {
             aliases     => [ qw// ],
-            path        => 'blocks/exists/:id',
+            path        => 'account/settings',
+            method      => 'GET',
+            params      => [ qw// ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'account_totals', {
+            aliases     => [ qw// ],
+            path        => 'account/totals',
+            method      => 'GET',
+            params      => [ qw// ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'all_lists', {
+            aliases     => [ qw// ],
+            path        => 'lists/all',
             method      => 'GET',
             params      => [ qw/id user_id screen_name/ ],
             required    => [ qw/id/ ],
@@ -406,16 +427,28 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
+        [ 'block_exists', {
+            aliases     => [ qw// ],
+            path        => 'blocks/exists/:id',
+            method      => 'GET',
+            params      => [ qw/id user_id screen_name include_entities/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
         [ 'blocking', {
             aliases     => [ qw// ],
             path        => 'blocks/blocking',
             method      => 'GET',
-            params      => [ qw/page/ ],
+            params      => [ qw/page include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'blocking_ids', {
@@ -434,36 +467,36 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'blocks/create/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id user_id screen_name include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'create_favorite', {
             aliases     => [ qw// ],
             path        => 'favorites/create/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'create_friend', {
             aliases     => [ qw/follow_new/ ],
             path        => 'friendships/create/:id',
             method      => 'POST',
-            params      => [ qw/id user_id screen_name follow/ ],
+            params      => [ qw/id user_id screen_name follow include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities follow/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'create_saved_search', {
@@ -482,48 +515,48 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'blocks/destroy/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id user_idscreen_name/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'destroy_direct_message', {
             aliases     => [ qw// ],
             path        => 'direct_messages/destroy/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'destroy_favorite', {
             aliases     => [ qw// ],
             path        => 'favorites/destroy/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'destroy_friend', {
             aliases     => [ qw/unfollow/ ],
             path        => 'friendships/destroy/:id',
             method      => 'POST',
-            params      => [ qw/id user_id screen_name/ ],
+            params      => [ qw/id user_id screen_name include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'destroy_saved_search', {
@@ -542,20 +575,20 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'statuses/destroy/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id trim_user include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/trim_user include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'direct_messages', {
             aliases     => [ qw// ],
             path        => 'direct_messages',
             method      => 'GET',
-            params      => [ qw/since_id max_id count page/ ],
-            required    => [ qw// ],
+            params      => [ qw/since_id max_id count page include_entities/ ],
+            required    => [ qw/include_entities/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
@@ -566,12 +599,12 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'notifications/leave/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id screen_name include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'downtime_schedule', {
@@ -590,12 +623,12 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'notifications/follow/:id',
             method      => 'POST',
-            params      => [ qw/id/ ],
+            params      => [ qw/id screen_name include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'end_session', {
@@ -614,24 +647,24 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'favorites/:id',
             method      => 'GET',
-            params      => [ qw/id page/ ],
+            params      => [ qw/id page include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'followers', {
             aliases     => [ qw// ],
             path        => 'statuses/followers/:id',
             method      => 'GET',
-            params      => [ qw/id user_id screen_name cursor/ ],
+            params      => [ qw/id user_id screen_name cursor include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'followers_ids', {
@@ -650,12 +683,12 @@ my $api_def = [
             aliases     => [ qw/following/ ],
             path        => 'statuses/friends/:id',
             method      => 'GET',
-            params      => [ qw/id user_id screen_name cursor/ ],
+            params      => [ qw/id user_id screen_name cursor include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'friends_ids', {
@@ -674,12 +707,12 @@ my $api_def = [
             aliases     => [ qw/following_timeline/ ],
             path        => 'statuses/friends_timeline',
             method      => 'GET',
-            params      => [ qw/since_id max_id count page skip_user/ ],
+            params      => [ qw/since_id max_id count page skip_user trim_user include_entities include_rts/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw/skip_user/ ],
+            booleans    => [ qw/skip_user trim_user include_entities include_rts/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'friendship_exists', {
@@ -734,17 +767,17 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'statuses/home_timeline',
             method      => 'GET',
-            params      => [ qw/since_id max_id count page skip_user/ ],
+            params      => [ qw/since_id max_id count page skip_user exclude_replies contributor_details include_rts include_entities trim_user include_my_retweet/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw/skip_user/ ],
+            booleans    => [ qw/skip_user exclude_replies contributor_details include_rts include_entities trim_user include_my_retweet/ ],
         base_url_method => 'apiurl',
         } ],
-        [ 'lookup_users', {
+        [ 'lookup_friendships', {
             aliases     => [ qw// ],
-            path        => 'users/lookup',
+            path        => 'friendships/lookup',
             method      => 'GET',
             params      => [ qw/user_id screen_name/ ],
             required    => [ qw// ],
@@ -754,24 +787,48 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
-        [ 'mentions', {
-            aliases     => [ qw/replies/ ],
-            path        => 'statuses/replies',
+        [ 'lookup_users', {
+            aliases     => [ qw// ],
+            path        => 'users/lookup',
             method      => 'GET',
-            params      => [ qw/since_id max_id count page/ ],
+            params      => [ qw/user_id screen_name include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'mentions', {
+            aliases     => [ qw/replies/ ],
+            path        => 'statuses/replies',
+            method      => 'GET',
+            params      => [ qw/since_id max_id count page trim_user include_rts include_entities/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/trim_user include_rts include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'new_direct_message', {
             aliases     => [ qw// ],
             path        => 'direct_messages/new',
             method      => 'POST',
-            params      => [ qw/user text screen_name user_id/ ],
+            params      => [ qw/user text screen_name user_id include_entities/ ],
             required    => [ qw/user text/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'no_retweet_ids', {
+            aliases     => [ qw// ],
+            path        => 'friendships/no_retweet_ids',
+            method      => 'GET',
+            params      => [ qw// ],
+            required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
@@ -782,12 +839,12 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'statuses/public_timeline',
             method      => 'GET',
-            params      => [ qw/skip_user/ ],
+            params      => [ qw/skip_user trim_user include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw/skip_user/ ],
+            booleans    => [ qw/skip_user trim_user include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'rate_limit_status', {
@@ -802,22 +859,10 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
-        [ 'report_spam', {
+        [ 'related_results', {
             aliases     => [ qw// ],
-            path        => 'report_spam',
-            method      => 'POST',
-            params      => [ qw/id user_id screen_name/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
-        } ],
-        [ 'retweet', {
-            aliases     => [ qw// ],
-            path        => 'statuses/retweet/:id',
-            method      => 'POST',
+            path        => 'related_results/show/:id',
+            method      => 'GET',
             params      => [ qw/id/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
@@ -826,36 +871,72 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
-        [ 'retweeted_by', {
+        [ 'report_spam', {
             aliases     => [ qw// ],
-            path        => 'statuses/:id/retweeted_by',
-            method      => 'GET',
-            params      => [ qw/id count page/ ],
+            path        => 'report_spam',
+            method      => 'POST',
+            params      => [ qw/id user_id screen_name include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'retweet', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweet/:id',
+            method      => 'POST',
+            params      => [ qw/id include_entities trim_user/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/include_entities trim_user/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'retweeted_by', {
+            aliases     => [ qw// ],
+            path        => 'statuses/:id/retweeted_by',
+            method      => 'GET',
+            params      => [ qw/id count page trim_user include_entities/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/include_entities trim_user/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by_ids', {
             aliases     => [ qw// ],
             path        => 'statuses/:id/retweeted_by/ids',
             method      => 'GET',
-            params      => [ qw/id count page/ ],
+            params      => [ qw/id count page trim_user include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities trim_user/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by_me', {
             aliases     => [ qw// ],
             path        => 'statuses/retweeted_by_me',
             method      => 'GET',
-            params      => [ qw/since_id max_id count page/ ],
+            params      => [ qw/since_id max_id count page trim_user include_entities/ ],
             required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/trim_user include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'retweeted_by_user', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweeted_by_user',
+            method      => 'GET',
+            params      => [ qw/id user_id screen_name/ ],
+            required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
@@ -874,11 +955,11 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
-        [ 'retweets', {
+        [ 'retweeted_to_user', {
             aliases     => [ qw// ],
-            path        => 'statuses/retweets/:id',
+            path        => 'statuses/retweeted_to_user',
             method      => 'GET',
-            params      => [ qw/id count/ ],
+            params      => [ qw/id user_id screen_name/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
@@ -886,16 +967,28 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
+        [ 'retweets', {
+            aliases     => [ qw// ],
+            path        => 'statuses/retweets/:id',
+            method      => 'GET',
+            params      => [ qw/id count trim_user include_entities/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/trim_user include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
         [ 'retweets_of_me', {
             aliases     => [ qw/retweeted_of_me/ ],
             path        => 'statuses/retweets_of_me',
             method      => 'GET',
-            params      => [ qw/since_id max_id count page/ ],
+            params      => [ qw/since_id max_id count page trim_user include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/trim_user include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'reverse_geocode', {
@@ -926,12 +1019,24 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'direct_messages/sent',
             method      => 'GET',
-            params      => [ qw/since_id max_id page/ ],
+            params      => [ qw/since_id max_id page count include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'show_direct_message', {
+            aliases     => [ qw// ],
+            path        => 'direct_messages/show/:id',
+            method      => 'GET',
+            params      => [ qw/id include_entities/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'show_friendship', {
@@ -962,20 +1067,32 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'statuses/show/:id',
             method      => 'GET',
-            params      => [ qw/id/ ],
+            params      => [ qw/id trim_user include_entities/ ],
             required    => [ qw/id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/trim_user include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'show_user', {
             aliases     => [ qw// ],
             path        => 'users/show/:id',
             method      => 'GET',
-            params      => [ qw/id/ ],
+            params      => [ qw/id screen_name include_entities/ ],
             required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/include_entities/ ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'suggestion_categories', {
+            aliases     => [ qw// ],
+            path        => 'users/suggestions',
+            method      => 'GET',
+            params      => [ qw// ],
+            required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
@@ -994,6 +1111,18 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
+        [ 'trends', {
+            aliases     => [ qw// ],
+            path        => 'trends',
+            method      => 'GET',
+            params      => [ qw// ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 0,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
         [ 'trends_available', {
             aliases     => [ qw// ],
             path        => 'trends/available',
@@ -1002,19 +1131,55 @@ my $api_def = [
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
-            authenticate => 1,
+            authenticate => 0,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'trends_current', {
+            aliases     => [ qw// ],
+            path        => 'trends/current',
+            method      => 'GET',
+            params      => [ qw/exclude/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 0,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'trends_daily', {
+            aliases     => [ qw// ],
+            path        => 'trends/daily',
+            method      => 'GET',
+            params      => [ qw/date exclude/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 0,
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
         [ 'trends_location', {
             aliases     => [ qw// ],
-            path        => 'trends/location',
+            path        => 'trends/:woeid',
             method      => 'GET',
             params      => [ qw/woeid/ ],
             required    => [ qw/woeid/ ],
             add_source  => 0,
             deprecated  => 0,
-            authenticate => 1,
+            authenticate => 0,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'trends_weekly', {
+            aliases     => [ qw// ],
+            path        => 'trends/weekly',
+            method      => 'GET',
+            params      => [ qw/date exclude/ ],
+            required    => [ qw// ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 0,
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
@@ -1022,12 +1187,12 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'statuses/update',
             method      => 'POST',
-            params      => [ qw/status lat long place_id display_coordinates in_reply_to_status_id/ ],
+            params      => [ qw/status lat long place_id display_coordinates in_reply_to_status_id trim_user include_entities/ ],
             required    => [ qw/status/ ],
             add_source  => 1,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw/display_coordinates/ ],
+            booleans    => [ qw/display_coordinates trim_user include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'update_delivery_device', {
@@ -1040,6 +1205,18 @@ my $api_def = [
             deprecated  => 0,
             authenticate => 1,
             booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
+        [ 'update_friendship', {
+            aliases     => [ qw// ],
+            path        => 'friendships/update',
+            method      => 'POST',
+            params      => [ qw/id user_id screen_name device retweets/ ],
+            required    => [ qw/id/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw/device retweets/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'update_location', {
@@ -1058,24 +1235,24 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'account/update_profile',
             method      => 'POST',
-            params      => [ qw/name email url location description/ ],
+            params      => [ qw/name email url location description include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'update_profile_background_image', {
             aliases     => [ qw// ],
             path        => 'account/update_profile_background_image',
             method      => 'POST',
-            params      => [ qw/image/ ],
+            params      => [ qw/image use/ ],
             required    => [ qw/image/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/use/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'update_profile_colors', {
@@ -1102,40 +1279,52 @@ my $api_def = [
             booleans    => [ qw// ],
         base_url_method => 'apiurl',
         } ],
+        [ 'user_suggestions', {
+            aliases     => [ qw/follow_suggestions/ ],
+            path        => 'users/suggestions/:category/members',
+            method      => 'GET',
+            params      => [ qw/category lang/ ],
+            required    => [ qw/category/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'apiurl',
+        } ],
         [ 'user_timeline', {
             aliases     => [ qw// ],
             path        => 'statuses/user_timeline/:id',
             method      => 'GET',
-            params      => [ qw/id user_id screen_name since_id max_id count page skip_user/ ],
+            params      => [ qw/id user_id screen_name since_id max_id count page skip_user trim_user include_entities include_rts/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw/skip_user/ ],
+            booleans    => [ qw/skip_user trim_user include_entities include_rts/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'users_search', {
             aliases     => [ qw/find_people search_users/ ],
             path        => 'users/search',
             method      => 'GET',
-            params      => [ qw/q per_page page/ ],
+            params      => [ qw/q per_page page include_entities/ ],
             required    => [ qw/q/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
         [ 'verify_credentials', {
             aliases     => [ qw// ],
             path        => 'account/verify_credentials',
             method      => 'GET',
-            params      => [ qw// ],
+            params      => [ qw/include_entities/ ],
             required    => [ qw// ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
-            booleans    => [ qw// ],
+            booleans    => [ qw/include_entities/ ],
         base_url_method => 'apiurl',
         } ],
     ] ],
@@ -1144,61 +1333,13 @@ my $api_def = [
             aliases     => [ qw// ],
             path        => 'search',
             method      => 'GET',
-            params      => [ qw/q callback lang rpp page since_id geocode show_user/ ],
+            params      => [ qw/q callback lang locale rpp page since_id until geocode show_user result_type/ ],
             required    => [ qw/q/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 0,
             booleans    => [ qw// ],
         base_url_method => 'searchapiurl',
-        } ],
-        [ 'trends', {
-            aliases     => [ qw// ],
-            path        => 'trends',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'search_trends_api_url',
-        } ],
-        [ 'trends_current', {
-            aliases     => [ qw// ],
-            path        => 'trends/current',
-            method      => 'GET',
-            params      => [ qw/exclude/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'search_trends_api_url',
-        } ],
-        [ 'trends_daily', {
-            aliases     => [ qw// ],
-            path        => 'trends/daily',
-            method      => 'GET',
-            params      => [ qw/date exclude/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'search_trends_api_url',
-        } ],
-        [ 'trends_weekly', {
-            aliases     => [ qw// ],
-            path        => 'trends/weekly',
-            method      => 'GET',
-            params      => [ qw/date exclude/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'search_trends_api_url',
         } ],
     ] ],
     [ Lists => [
@@ -1352,6 +1493,18 @@ my $api_def = [
             method      => 'GET',
             params      => [ qw/user cursor/ ],
             required    => [ qw/user/ ],
+            add_source  => 0,
+            deprecated  => 0,
+            authenticate => 1,
+            booleans    => [ qw// ],
+        base_url_method => 'lists_api_url',
+        } ],
+        [ 'members_create_all', {
+            aliases     => [ qw/add_list_members/ ],
+            path        => ':user/:list_id/members/create_all',
+            method      => 'POST',
+            params      => [ qw/user list_id screen_name user_id/ ],
+            required    => [ qw/user list_id/ ],
             add_source  => 0,
             deprecated  => 0,
             authenticate => 1,
@@ -1559,7 +1712,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.10003
+This document describes Net::Twitter::Lite version 0.10004
 
 =head1 SYNOPSIS
 
@@ -1844,7 +1997,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.10003 (Perl)".
+"Net::Twitter::Lite/0.10004 (Perl)".
 
 =item source
 
@@ -2074,6 +2227,64 @@ also parameters, using any one of them satisfies the requirement.
 
 =over 4
 
+=item B<account_settings>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the current trend, geo and sleep time information for the
+authenticating user.
+
+
+Returns: HashRef
+
+=item B<account_totals>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the current count of friends, followers, updates (statuses)
+and favorites of the authenticating user.
+
+
+Returns: HashRef
+
+=item B<all_lists>
+
+=item B<all_lists(id)>
+
+
+
+=over 4
+
+=item Parameters: id, user_id, screen_name
+
+=item Required: id
+
+=back
+
+Returns all lists the authenticating or specified user subscribes to, including
+their own. The user is specified using the C<user_id> or C<screen_name
+parameters>. If no user is given, the authenticating user is used.  Requires
+authentication unless requesting for another user.
+
+
+Returns: ArrayRef[List]
+
 =item B<block_exists>
 
 =item B<block_exists(id)>
@@ -2082,7 +2293,7 @@ also parameters, using any one of them satisfies the requirement.
 
 =over 4
 
-=item Parameters: id, user_id, screen_name
+=item Parameters: id, user_id, screen_name, include_entities
 
 =item Required: id
 
@@ -2096,13 +2307,11 @@ Returns: BasicUser
 
 =item B<blocking>
 
-=item B<blocking(page)>
-
 
 
 =over 4
 
-=item Parameters: page
+=item Parameters: page, include_entities
 
 =item Required: I<none>
 
@@ -2138,7 +2347,7 @@ Returns: ArrayRef[Int]
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, user_id, screen_name, include_entities
 
 =item Required: id
 
@@ -2159,7 +2368,7 @@ Returns: BasicUser
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, include_entities
 
 =item Required: id
 
@@ -2181,7 +2390,7 @@ Returns: Status
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, follow
+=item Parameters: id, user_id, screen_name, follow, include_entities
 
 =item Required: id
 
@@ -2221,7 +2430,7 @@ Returns: SavedSearch
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, user_idscreen_name
 
 =item Required: id
 
@@ -2241,7 +2450,7 @@ Returns: BasicUser
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, include_entities
 
 =item Required: id
 
@@ -2262,7 +2471,7 @@ Returns: DirectMessage
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, include_entities
 
 =item Required: id
 
@@ -2284,7 +2493,7 @@ Returns: Status
 
 =over 4
 
-=item Parameters: id, user_id, screen_name
+=item Parameters: id, user_id, screen_name, include_entities
 
 =item Required: id
 
@@ -2325,7 +2534,7 @@ Returns: SavedSearch
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, trim_user, include_entities
 
 =item Required: id
 
@@ -2339,13 +2548,15 @@ Returns: Status
 
 =item B<direct_messages>
 
+=item B<direct_messages(include_entities)>
+
 
 
 =over 4
 
-=item Parameters: since_id, max_id, count, page
+=item Parameters: since_id, max_id, count, page, include_entities
 
-=item Required: I<none>
+=item Required: include_entities
 
 =back
 
@@ -2363,7 +2574,7 @@ Returns: ArrayRef[DirectMessage]
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, screen_name, include_entities
 
 =item Required: id
 
@@ -2383,7 +2594,7 @@ Returns: BasicUser
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, screen_name, include_entities
 
 =item Required: id
 
@@ -2420,7 +2631,7 @@ Returns: Error
 
 =over 4
 
-=item Parameters: id, page
+=item Parameters: id, page, include_entities
 
 =item Required: I<none>
 
@@ -2438,7 +2649,7 @@ Returns: ArrayRef[Status]
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, cursor
+=item Parameters: id, user_id, screen_name, cursor, include_entities
 
 =item Required: I<none>
 
@@ -2500,7 +2711,7 @@ Returns: HashRef|ArrayRef[Int]
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, cursor
+=item Parameters: id, user_id, screen_name, cursor, include_entities
 
 =item Required: I<none>
 
@@ -2564,7 +2775,7 @@ Returns: HashRef|ArrayRef[Int]
 
 =over 4
 
-=item Parameters: since_id, max_id, count, page, skip_user
+=item Parameters: since_id, max_id, count, page, skip_user, trim_user, include_entities, include_rts
 
 =item Required: I<none>
 
@@ -2666,7 +2877,7 @@ Returns: HashRef
 
 =over 4
 
-=item Parameters: since_id, max_id, count, page, skip_user
+=item Parameters: since_id, max_id, count, page, skip_user, exclude_replies, contributor_details, include_rts, include_entities, trim_user, include_my_retweet
 
 =item Required: I<none>
 
@@ -2679,13 +2890,33 @@ authenticating user and that user's friends. This is the equivalent of
 
 Returns: ArrayRef[Status]
 
-=item B<lookup_users>
+=item B<lookup_friendships>
 
 
 
 =over 4
 
 =item Parameters: user_id, screen_name
+
+=item Required: I<none>
+
+=back
+
+Returns the relationship of the authenticating user to the comma separated list
+or ARRAY ref of up to 100 screen_names or user_ids provided. Values for
+connections can be: following, following_requested, followed_by, none.
+Requires authentication.
+
+
+Returns: ArrayRef
+
+=item B<lookup_users>
+
+
+
+=over 4
+
+=item Parameters: user_id, screen_name, include_entities
 
 =item Required: I<none>
 
@@ -2724,7 +2955,7 @@ Returns: ArrayRef[User]
 
 =over 4
 
-=item Parameters: since_id, max_id, count, page
+=item Parameters: since_id, max_id, count, page, trim_user, include_rts, include_entities
 
 =item Required: I<none>
 
@@ -2744,7 +2975,7 @@ Returns: ArrayRef[Status]
 
 =over 4
 
-=item Parameters: user, text, screen_name, user_id
+=item Parameters: user, text, screen_name, user_id, include_entities
 
 =item Required: user, text
 
@@ -2758,15 +2989,31 @@ C<user_id> parameters may be used instead of C<user>.
 
 Returns: DirectMessage
 
-=item B<public_timeline>
-
-=item B<public_timeline(skip_user)>
+=item B<no_retweet_ids>
 
 
 
 =over 4
 
-=item Parameters: skip_user
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns an ARRAY ref of user IDs for which the authenticating user does not
+want to receive retweets.
+
+
+Returns: ArrayRef[UserIDs]
+
+=item B<public_timeline>
+
+
+
+=over 4
+
+=item Parameters: skip_user, trim_user, include_entities
 
 =item Required: I<none>
 
@@ -2808,6 +3055,28 @@ IP address.)
 
 Returns: RateLimitStatus
 
+=item B<related_results>
+
+=item B<related_results(id)>
+
+
+
+=over 4
+
+=item Parameters: id
+
+=item Required: id
+
+=back
+
+If available, returns an array of replies and mentions related to the specified
+status. There is no guarantee there will be any replies or mentions in the
+response. This method is only available to users who have access to
+#newtwitter.  Requires authentication.
+
+
+Returns: ArrayRef[Status]
+
 =item B<report_spam>
 
 =item B<report_spam(id)>
@@ -2816,7 +3085,7 @@ Returns: RateLimitStatus
 
 =over 4
 
-=item Parameters: id, user_id, screen_name
+=item Parameters: id, user_id, screen_name, include_entities
 
 =item Required: id
 
@@ -2835,7 +3104,7 @@ Returns: User
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, include_entities, trim_user
 
 =item Required: id
 
@@ -2855,7 +3124,7 @@ Returns: Status
 
 =over 4
 
-=item Parameters: id, count, page
+=item Parameters: id, count, page, trim_user, include_entities
 
 =item Required: id
 
@@ -2874,7 +3143,7 @@ Returns: ArrayRef[User]
 
 =over 4
 
-=item Parameters: id, count, page
+=item Parameters: id, count, page, trim_user, include_entities
 
 =item Required: id
 
@@ -2891,7 +3160,7 @@ Returns: ArrayRef[User]
 
 =over 4
 
-=item Parameters: since_id, max_id, count, page
+=item Parameters: since_id, max_id, count, page, trim_user, include_entities
 
 =item Required: I<none>
 
@@ -2901,6 +3170,28 @@ Returns the 20 most recent retweets posted by the authenticating user.
 
 
 Returns: ArrayRef[Status]
+
+=item B<retweeted_by_user>
+
+=item B<retweeted_by_user(id)>
+
+
+
+=over 4
+
+=item Parameters: id, user_id, screen_name
+
+=item Required: id
+
+=back
+
+Returns the 20 most recent retweets posted by the specified user. The user is
+specified using the user_id or screen_name parameters. This method is identical
+to C<retweeted_by_me> except you can choose the user to view.  Does not require
+authentication, unless the user is protected.
+
+
+Returns: ArrayRef
 
 =item B<retweeted_to_me>
 
@@ -2919,6 +3210,29 @@ Returns the 20 most recent retweets posted by the authenticating user's friends.
 
 Returns: ArrayRef[Status]
 
+=item B<retweeted_to_user>
+
+=item B<retweeted_to_user(id)>
+
+
+
+=over 4
+
+=item Parameters: id, user_id, screen_name
+
+=item Required: id
+
+=back
+
+Returns the 20 most recent retweets posted by users the specified user
+follows. The user is specified using the user_id or screen_name
+parameters. This method is identical to C<retweeted_to_me>
+except you can choose the user to view.
+Does not require authentication, unless the user is protected.
+
+
+Returns: ArrayRef
+
 =item B<retweets>
 
 =item B<retweets(id)>
@@ -2927,7 +3241,7 @@ Returns: ArrayRef[Status]
 
 =over 4
 
-=item Parameters: id, count
+=item Parameters: id, count, trim_user, include_entities
 
 =item Required: id
 
@@ -2946,7 +3260,7 @@ Returns: Arrayref[Status]
 
 =over 4
 
-=item Parameters: since_id, max_id, count, page
+=item Parameters: since_id, max_id, count, page, trim_user, include_entities
 
 =item Required: I<none>
 
@@ -2982,7 +3296,7 @@ ID of this location up with a call to statuses/update.
 
 There are multiple granularities of places that can be returned --
 "neighborhoods", "cities", etc.  At this time, only United States data is
-available through this method. 
+available through this method.
 
 =over 4
 
@@ -3015,7 +3329,7 @@ in, then C<neighborhood> is assumed.  C<city> can also be passed.
 Optional.  A hint as to the number of results to return.  This does not
 guarantee that the number of results returned will equal max_results, but
 instead informs how many "nearby" results to return.  Ideally, only pass in the
-number of places you intend to display to the user here. 
+number of places you intend to display to the user here.
 
 =back
 
@@ -3046,7 +3360,7 @@ Returns: ArrayRef[SavedSearch]
 
 =over 4
 
-=item Parameters: since_id, max_id, page
+=item Parameters: since_id, max_id, page, count, include_entities
 
 =item Required: I<none>
 
@@ -3057,6 +3371,27 @@ user including detailed information about the sending and recipient users.
 
 
 Returns: ArrayRef[DirectMessage]
+
+=item B<show_direct_message>
+
+=item B<show_direct_message(id)>
+
+
+
+=over 4
+
+=item Parameters: id, include_entities
+
+=item Required: id
+
+=back
+
+Returns a single direct message, specified by an id parameter. Like
+the C<direct_messages> request, this method will include the
+user objects of the sender and recipient.  Requires authentication.
+
+
+Returns: HashRef
 
 =item B<show_friendship>
 
@@ -3106,7 +3441,7 @@ Returns: SavedSearch
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, trim_user, include_entities
 
 =item Required: id
 
@@ -3126,7 +3461,7 @@ Returns: Status
 
 =over 4
 
-=item Parameters: id
+=item Parameters: id, screen_name, include_entities
 
 =item Required: id
 
@@ -3140,6 +3475,25 @@ authenticated to request the page of a protected user.
 
 
 Returns: ExtendedUser
+
+=item B<suggestion_categories>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the list of suggested user categories. The category slug can be used in
+the C<user_suggestions> API method get the users in that category .  Does not
+require authentication.
+
+
+Returns: ArrayRef
 
 =item B<test>
 
@@ -3157,6 +3511,25 @@ Returns the string "ok" status code.
 
 
 Returns: Str
+
+=item B<trends>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the top ten queries that are currently trending on Twitter.  The
+response includes the time of the request, the name of each trending topic, and
+the url to the Twitter Search results page for that topic.
+
+
+Returns: ArrayRef[Query]
 
 =item B<trends_available>
 
@@ -3184,6 +3557,44 @@ location.
 
 Returns: ArrayRef[Location]
 
+=item B<trends_current>
+
+=item B<trends_current(exclude)>
+
+
+
+=over 4
+
+=item Parameters: exclude
+
+=item Required: I<none>
+
+=back
+
+Returns the current top ten trending topics on Twitter.  The response includes
+the time of the request, the name of each trending topic, and query used on
+Twitter Search results page for that topic.
+
+
+Returns: HashRef
+
+=item B<trends_daily>
+
+
+
+=over 4
+
+=item Parameters: date, exclude
+
+=item Required: I<none>
+
+=back
+
+Returns the top 20 trending topics for each hour in a given day.
+
+
+Returns: HashRef
+
 =item B<trends_location>
 
 =item B<trends_location(woeid)>
@@ -3209,6 +3620,23 @@ available from this API by using a WOEID of 1.
 
 Returns: ArrayRef[Trend]
 
+=item B<trends_weekly>
+
+
+
+=over 4
+
+=item Parameters: date, exclude
+
+=item Required: I<none>
+
+=back
+
+Returns the top 30 trending topics for each day in a given week.
+
+
+Returns: HashRef
+
 =item B<update>
 
 =item B<update(status)>
@@ -3217,7 +3645,7 @@ Returns: ArrayRef[Trend]
 
 =over 4
 
-=item Parameters: status, lat, long, place_id, display_coordinates, in_reply_to_status_id
+=item Parameters: status, lat, long, place_id, display_coordinates, in_reply_to_status_id, trim_user, include_entities
 
 =item Required: status
 
@@ -3297,13 +3725,34 @@ updates.
 
 Returns: BasicUser
 
+=item B<update_friendship>
+
+=item B<update_friendship(id)>
+
+
+
+=over 4
+
+=item Parameters: id, user_id, screen_name, device, retweets
+
+=item Required: id
+
+=back
+
+Allows you enable or disable retweets and device notifications from the
+specified user. All other values are assumed to be false.  Requires
+authentication.
+
+
+Returns: HashRef
+
 =item B<update_profile>
 
 
 
 =over 4
 
-=item Parameters: name, email, url, location, description
+=item Parameters: name, email, url, location, description, include_entities
 
 =item Required: I<none>
 
@@ -3325,7 +3774,7 @@ Returns: ExtendedUser
 
 =over 4
 
-=item Parameters: image
+=item Parameters: image, use
 
 =item Required: image
 
@@ -3333,8 +3782,9 @@ Returns: ExtendedUser
 
 Updates the authenticating user's profile background image. The C<image>
 parameter must be an arrayref with the same interpretation as the C<image>
-parameter in the C<update_profile_image> method.  See that method's
-documentation for details.
+parameter in the C<update_profile_image> method.  The C<use> parameter allows
+you to specify whether to use the  uploaded profile background or not. See
+that method's documentation for details.
 
 
 Returns: ExtendedUser
@@ -3392,13 +3842,37 @@ C<undef> as the first array value.
 
 Returns: ExtendedUser
 
+=item B<user_suggestions>
+
+=item B<user_suggestions(category)>
+
+
+=item alias: follow_suggestions
+
+
+=over 4
+
+=item Parameters: category, lang
+
+=item Required: category
+
+=back
+
+Access the users in a given category of the Twitter suggested user list and
+return their most recent status if they are not a protected user. Currently
+supported values for optional parameter C<lang> are C<en>, C<fr>, C<de>, C<es>,
+C<it>.  Does not require authentication.
+
+
+Returns: ArrayRef
+
 =item B<user_timeline>
 
 
 
 =over 4
 
-=item Parameters: id, user_id, screen_name, since_id, max_id, count, page, skip_user
+=item Parameters: id, user_id, screen_name, since_id, max_id, count, page, skip_user, trim_user, include_entities, include_rts
 
 =item Required: I<none>
 
@@ -3424,7 +3898,7 @@ Returns: ArrayRef[Status]
 
 =over 4
 
-=item Parameters: q, per_page, page
+=item Parameters: q, per_page, page, include_entities
 
 =item Required: q
 
@@ -3440,11 +3914,13 @@ Returns: ArrayRef[Users]
 
 =item B<verify_credentials>
 
+=item B<verify_credentials(include_entities)>
+
 
 
 =over 4
 
-=item Parameters: I<none>
+=item Parameters: include_entities
 
 =item Required: I<none>
 
@@ -3477,7 +3953,7 @@ Returns: ExtendedUser
 
 =over 4
 
-=item Parameters: q, callback, lang, rpp, page, since_id, geocode, show_user
+=item Parameters: q, callback, lang, locale, rpp, page, since_id, until, geocode, show_user, result_type
 
 =item Required: q
 
@@ -3491,80 +3967,6 @@ C<results>.  To iterate over the results, use something similar to:
     for my $status ( @{$r->{results}} ) {
         print "$status->{text}\n";
     }
-
-
-Returns: HashRef
-
-=item B<trends>
-
-
-
-=over 4
-
-=item Parameters: I<none>
-
-=item Required: I<none>
-
-=back
-
-Returns the top ten queries that are currently trending on Twitter.  The
-response includes the time of the request, the name of each trending topic, and
-the url to the Twitter Search results page for that topic.
-
-
-Returns: ArrayRef[Query]
-
-=item B<trends_current>
-
-=item B<trends_current(exclude)>
-
-
-
-=over 4
-
-=item Parameters: exclude
-
-=item Required: I<none>
-
-=back
-
-Returns the current top ten trending topics on Twitter.  The response includes
-the time of the request, the name of each trending topic, and query used on
-Twitter Search results page for that topic.
-
-
-Returns: HashRef
-
-=item B<trends_daily>
-
-
-
-=over 4
-
-=item Parameters: date, exclude
-
-=item Required: I<none>
-
-=back
-
-Returns the top 20 trending topics for each hour in a given day.
-
-
-Returns: HashRef
-
-=item B<trends_weekly>
-
-
-
-=over 4
-
-=item Parameters: date, exclude
-
-=item Required: I<none>
-
-=back
-
-Returns the top 30 trending topics for each day in a given week.
 
 
 Returns: HashRef
@@ -3862,6 +4264,30 @@ are returned in the C<lists> element of the hash.
 
 Returns: 
 
+=item B<members_create_all>
+
+=item B<members_create_all(user, list_id)>
+
+
+=item alias: add_list_members
+
+
+=over 4
+
+=item Parameters: user, list_id, screen_name, user_id
+
+=item Required: user, list_id
+
+=back
+
+Adds multiple users C<id> to the list. Users are specified with the C<screen_name>
+or C<user_id> parameter with a reference to an ARRAY of values.
+
+Returns a reference the added user as a hash reference.
+
+
+Returns: ArrayRef[User]
+
 =item B<subscribe_list>
 
 =item B<subscribe_list(user, list_id)>
@@ -4046,9 +4472,10 @@ secret to upgrade the request token to access token.
       my $nt = Net::Twitter::Lite->new(%param);
       $nt->request_token($cookie{token});
       $nt->request_token_secret($cookie{token_secret});
+      my $verifier = $c->req->param->{oauth_verifier};
 
       my($access_token, $access_token_secret, $user_id, $screen_name) =
-          $nt->request_access_token;
+          $nt->request_access_token(verifier => $verifier);
 
       # Save $access_token and $access_token_secret in the database associated with $c->user
   }
