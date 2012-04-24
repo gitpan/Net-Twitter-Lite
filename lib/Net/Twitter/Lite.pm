@@ -3,17 +3,17 @@ use 5.005;
 use warnings;
 use strict;
 
-our $VERSION = '0.10004';
+our $VERSION = '0.11000_00';
 $VERSION = eval { $VERSION };
 
 use Carp;
 use URI::Escape;
-use JSON::Any qw/XS JSON/;
+use JSON;
 use HTTP::Request::Common;
 use Net::Twitter::Lite::Error;
 use Encode qw/encode_utf8/;
 
-my $json_handler = JSON::Any->new(utf8 => 1);
+my $json_handler = JSON->new->utf8;
 
 sub new {
     my ($class, %args) = @_;
@@ -44,6 +44,20 @@ sub new {
         %args
     }, $class;
 
+    unless ( exists $new->{legacy_lists_api} ) {
+        $new->{legacy_lists_api} = 1;
+        carp
+"For backwards compatibility @{[ __PACKAGE__ ]} uses the deprecated Lists API
+endpoints and semantics. This default will be changed in a future version.
+Please update your code to use the new lists semantics and pass
+(legacy_lists_api => 0) to new.
+
+You can disable this warning, and keep backwards compatibility by passing
+(legacy_lists_api => 1) to new. Be warned, however, that support for the
+legacy endpoints will be removed in a future version and the default will
+change to (legacy_lists_api => 0).";
+
+    }
 
     if ( delete $args{ssl} ) {
         $new->{$_} =~ s/^http:/https:/
@@ -390,1162 +404,1498 @@ sub _mk_post_msg {
 { ### scope $api_def
 
 my $api_def = [
+    [ Lists => [
+        [ 'legacy_add_list_member', {
+            aliases         => [ qw// ],
+            path            => ':user/:list_id/members',
+            method          => 'POST',
+            params          => [ qw/user list_id id/ ],
+            required        => [ qw/user list_id id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_create_list', {
+            aliases         => [ qw// ],
+            path            => ':user/lists',
+            method          => 'POST',
+            params          => [ qw/user name mode description/ ],
+            required        => [ qw/user name/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_delete_list', {
+            aliases         => [ qw// ],
+            path            => ':user/lists/:list_id',
+            method          => 'DELETE',
+            params          => [ qw/user list_id/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_delete_list_member', {
+            aliases         => [ qw/legacy_remove_list_member/ ],
+            path            => ':user/:list_id/members',
+            method          => 'DELETE',
+            params          => [ qw/user list_id id/ ],
+            required        => [ qw/user list_id id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_get_list', {
+            aliases         => [ qw// ],
+            path            => ':user/lists/:list_id',
+            method          => 'GET',
+            params          => [ qw/user list_id/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_get_lists', {
+            aliases         => [ qw/legacy_list_lists/ ],
+            path            => ':user/lists',
+            method          => 'GET',
+            params          => [ qw/user cursor/ ],
+            required        => [ qw/user/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_is_list_member', {
+            aliases         => [ qw// ],
+            path            => ':user/:list_id/members/:id',
+            method          => 'GET',
+            params          => [ qw/user list_id id/ ],
+            required        => [ qw/user list_id id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_is_list_subscriber', {
+            aliases         => [ qw/legacy_is_subscribed_list/ ],
+            path            => ':user/:list_id/subscribers/:id',
+            method          => 'GET',
+            params          => [ qw/user list_id id/ ],
+            required        => [ qw/user list_id id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_list_members', {
+            aliases         => [ qw// ],
+            path            => ':user/:list_id/members',
+            method          => 'GET',
+            params          => [ qw/user list_id id cursor/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_list_memberships', {
+            aliases         => [ qw// ],
+            path            => ':user/lists/memberships',
+            method          => 'GET',
+            params          => [ qw/user cursor/ ],
+            required        => [ qw/user/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_list_statuses', {
+            aliases         => [ qw// ],
+            path            => ':user/lists/:list_id/statuses',
+            method          => 'GET',
+            params          => [ qw/user list_id since_id max_id per_page page/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_list_subscribers', {
+            aliases         => [ qw// ],
+            path            => ':user/:list_id/subscribers',
+            method          => 'GET',
+            params          => [ qw/user list_id id cursor/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_list_subscriptions', {
+            aliases         => [ qw// ],
+            path            => ':user/lists/subscriptions',
+            method          => 'GET',
+            params          => [ qw/user cursor/ ],
+            required        => [ qw/user/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_members_create_all', {
+            aliases         => [ qw/legacy_add_list_members/ ],
+            path            => ':user/:list_id/members/create_all',
+            method          => 'POST',
+            params          => [ qw/user list_id screen_name user_id/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_subscribe_list', {
+            aliases         => [ qw// ],
+            path            => ':user/:list_id/subscribers',
+            method          => 'POST',
+            params          => [ qw/user list_id/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_unsubscribe_list', {
+            aliases         => [ qw// ],
+            path            => ':user/:list_id/subscribers',
+            method          => 'DELETE',
+            params          => [ qw/user list_id/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+        [ 'legacy_update_list', {
+            aliases         => [ qw// ],
+            path            => ':user/lists/:list_id',
+            method          => 'POST',
+            params          => [ qw/user list_id name mode description/ ],
+            required        => [ qw/user list_id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'lists_api_url',
+        } ],
+    ] ],
     [ REST => [
         [ 'account_settings', {
-            aliases     => [ qw// ],
-            path        => 'account/settings',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/settings',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'account_totals', {
-            aliases     => [ qw// ],
-            path        => 'account/totals',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/totals',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
-        [ 'all_lists', {
-            aliases     => [ qw// ],
-            path        => 'lists/all',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+        [ 'add_list_member', {
+            aliases         => [ qw// ],
+            path            => 'lists/members/create',
+            method          => 'POST',
+            params          => [ qw/list_id slug user_id screen_name owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'add_place', {
+            aliases         => [ qw// ],
+            path            => 'geo/place',
+            method          => 'POST',
+            params          => [ qw/name contained_within token lat long attribute:street_address callback/ ],
+            required        => [ qw/name contained_within token lat long/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'all_subscriptions', {
+            aliases         => [ qw/all_lists list_subscriptions/ ],
+            path            => 'lists/all',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name count cursor/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'block_exists', {
-            aliases     => [ qw// ],
-            path        => 'blocks/exists/:id',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'blocks/exists/:id',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'blocking', {
-            aliases     => [ qw// ],
-            path        => 'blocks/blocking',
-            method      => 'GET',
-            params      => [ qw/page include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'blocks/blocking',
+            method          => 'GET',
+            params          => [ qw/page include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'blocking_ids', {
-            aliases     => [ qw// ],
-            path        => 'blocks/blocking/ids',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'blocks/blocking/ids',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'contributees', {
+            aliases         => [ qw// ],
+            path            => 'users/contributees',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name include_entities skip_satus/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities skip_satus/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'contributors', {
+            aliases         => [ qw// ],
+            path            => 'users/contributors',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name include_entities skip_satus/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities skip_satus/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'create_block', {
-            aliases     => [ qw// ],
-            path        => 'blocks/create/:id',
-            method      => 'POST',
-            params      => [ qw/id user_id screen_name include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'blocks/create/:id',
+            method          => 'POST',
+            params          => [ qw/id user_id screen_name include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'create_favorite', {
-            aliases     => [ qw// ],
-            path        => 'favorites/create/:id',
-            method      => 'POST',
-            params      => [ qw/id include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'favorites/create/:id',
+            method          => 'POST',
+            params          => [ qw/id include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'create_friend', {
-            aliases     => [ qw/follow_new/ ],
-            path        => 'friendships/create/:id',
-            method      => 'POST',
-            params      => [ qw/id user_id screen_name follow include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities follow/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/follow_new/ ],
+            path            => 'friendships/create/:id',
+            method          => 'POST',
+            params          => [ qw/id user_id screen_name follow include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities follow/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'create_list', {
+            aliases         => [ qw// ],
+            path            => 'lists/create',
+            method          => 'POST',
+            params          => [ qw/list_id slug name mode description owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'create_saved_search', {
-            aliases     => [ qw// ],
-            path        => 'saved_searches/create',
-            method      => 'POST',
-            params      => [ qw/query/ ],
-            required    => [ qw/query/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'saved_searches/create',
+            method          => 'POST',
+            params          => [ qw/query/ ],
+            required        => [ qw/query/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'delete_list', {
+            aliases         => [ qw// ],
+            path            => 'lists/destroy',
+            method          => 'POST',
+            params          => [ qw/owner_screen_name owner_id list_id slug/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'delete_list_member', {
+            aliases         => [ qw/remove_list_member/ ],
+            path            => 'lists/members/destroy',
+            method          => 'POST',
+            params          => [ qw/list_id slug user_id screen_name owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'destroy_block', {
-            aliases     => [ qw// ],
-            path        => 'blocks/destroy/:id',
-            method      => 'POST',
-            params      => [ qw/id user_idscreen_name/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'blocks/destroy/:id',
+            method          => 'POST',
+            params          => [ qw/id user_id screen_name/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'destroy_direct_message', {
-            aliases     => [ qw// ],
-            path        => 'direct_messages/destroy/:id',
-            method      => 'POST',
-            params      => [ qw/id include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'direct_messages/destroy/:id',
+            method          => 'POST',
+            params          => [ qw/id include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'destroy_favorite', {
-            aliases     => [ qw// ],
-            path        => 'favorites/destroy/:id',
-            method      => 'POST',
-            params      => [ qw/id include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'favorites/destroy/:id',
+            method          => 'POST',
+            params          => [ qw/id include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'destroy_friend', {
-            aliases     => [ qw/unfollow/ ],
-            path        => 'friendships/destroy/:id',
-            method      => 'POST',
-            params      => [ qw/id user_id screen_name include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/unfollow/ ],
+            path            => 'friendships/destroy/:id',
+            method          => 'POST',
+            params          => [ qw/id user_id screen_name include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'destroy_saved_search', {
-            aliases     => [ qw// ],
-            path        => 'saved_searches/destroy/:id',
-            method      => 'POST',
-            params      => [ qw/id/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'saved_searches/destroy/:id',
+            method          => 'POST',
+            params          => [ qw/id/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'destroy_status', {
-            aliases     => [ qw// ],
-            path        => 'statuses/destroy/:id',
-            method      => 'POST',
-            params      => [ qw/id trim_user include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/trim_user include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/destroy/:id',
+            method          => 'POST',
+            params          => [ qw/id trim_user include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/trim_user include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'direct_messages', {
-            aliases     => [ qw// ],
-            path        => 'direct_messages',
-            method      => 'GET',
-            params      => [ qw/since_id max_id count page include_entities/ ],
-            required    => [ qw/include_entities/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'direct_messages',
+            method          => 'GET',
+            params          => [ qw/since_id max_id count page include_entities/ ],
+            required        => [ qw/include_entities/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'disable_notifications', {
-            aliases     => [ qw// ],
-            path        => 'notifications/leave/:id',
-            method      => 'POST',
-            params      => [ qw/id screen_name include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'notifications/leave/:id',
+            method          => 'POST',
+            params          => [ qw/id screen_name include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'downtime_schedule', {
-            aliases     => [ qw// ],
-            path        => 'help/downtime_schedule',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 1,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'help/downtime_schedule',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 1,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'enable_notifications', {
-            aliases     => [ qw// ],
-            path        => 'notifications/follow/:id',
-            method      => 'POST',
-            params      => [ qw/id screen_name include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'notifications/follow/:id',
+            method          => 'POST',
+            params          => [ qw/id screen_name include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'end_session', {
-            aliases     => [ qw// ],
-            path        => 'account/end_session',
-            method      => 'POST',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/end_session',
+            method          => 'POST',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'favorites', {
-            aliases     => [ qw// ],
-            path        => 'favorites/:id',
-            method      => 'GET',
-            params      => [ qw/id page include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'favorites/:id',
+            method          => 'GET',
+            params          => [ qw/id page include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'followers', {
-            aliases     => [ qw// ],
-            path        => 'statuses/followers/:id',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name cursor include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/followers/:id',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name cursor include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 1,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'followers_ids', {
-            aliases     => [ qw// ],
-            path        => 'followers/ids/:id',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name cursor/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'followers/ids/:id',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name cursor/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'friends', {
-            aliases     => [ qw/following/ ],
-            path        => 'statuses/friends/:id',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name cursor include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/following/ ],
+            path            => 'statuses/friends/:id',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name cursor include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 1,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'friends_ids', {
-            aliases     => [ qw/following_ids/ ],
-            path        => 'friends/ids/:id',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name cursor/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/following_ids/ ],
+            path            => 'friends/ids/:id',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name cursor/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'friends_timeline', {
-            aliases     => [ qw/following_timeline/ ],
-            path        => 'statuses/friends_timeline',
-            method      => 'GET',
-            params      => [ qw/since_id max_id count page skip_user trim_user include_entities include_rts/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/skip_user trim_user include_entities include_rts/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/following_timeline/ ],
+            path            => 'statuses/friends_timeline',
+            method          => 'GET',
+            params          => [ qw/since_id max_id count page skip_user trim_user include_entities include_rts/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 1,
+            authenticate    => 1,
+            booleans        => [ qw/skip_user trim_user include_entities include_rts/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'friendship_exists', {
-            aliases     => [ qw/relationship_exists follows/ ],
-            path        => 'friendships/exists',
-            method      => 'GET',
-            params      => [ qw/user_a user_b/ ],
-            required    => [ qw/user_a user_b/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/relationship_exists follows/ ],
+            path            => 'friendships/exists',
+            method          => 'GET',
+            params          => [ qw/user_id_a user_id_b screen_name_a screen_name_b user_a user_b/ ],
+            required        => [ qw/user_a user_b/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'friendships_incoming', {
-            aliases     => [ qw// ],
-            path        => 'friendships/incoming',
-            method      => 'GET',
-            params      => [ qw/cursor/ ],
-            required    => [ qw/cursor/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'friendships/incoming',
+            method          => 'GET',
+            params          => [ qw/cursor/ ],
+            required        => [ qw/cursor/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'friendships_outgoing', {
-            aliases     => [ qw// ],
-            path        => 'friendships/outgoing',
-            method      => 'GET',
-            params      => [ qw/cursor/ ],
-            required    => [ qw/cursor/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'friendships/outgoing',
+            method          => 'GET',
+            params          => [ qw/cursor/ ],
+            required        => [ qw/cursor/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'geo_id', {
-            aliases     => [ qw// ],
-            path        => 'geo/id/:id',
-            method      => 'GET',
-            params      => [ qw/id/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'geo/id/:id',
+            method          => 'GET',
+            params          => [ qw/id/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'geo_search', {
+            aliases         => [ qw// ],
+            path            => 'geo/search',
+            method          => 'GET',
+            params          => [ qw/lat long query ip granularity accuracy max_results contained_within attribute:street_address callback/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'get_configuration', {
+            aliases         => [ qw// ],
+            path            => 'help/configuration',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'get_languages', {
+            aliases         => [ qw// ],
+            path            => 'help/languages',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'get_list', {
+            aliases         => [ qw// ],
+            path            => 'lists/show',
+            method          => 'GET',
+            params          => [ qw/list_id slug owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'get_lists', {
+            aliases         => [ qw/list_lists/ ],
+            path            => 'lists',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name cursor/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'get_privacy_policy', {
+            aliases         => [ qw// ],
+            path            => 'legal/privacy',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'get_tos', {
+            aliases         => [ qw// ],
+            path            => 'legal/tos',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'home_timeline', {
-            aliases     => [ qw// ],
-            path        => 'statuses/home_timeline',
-            method      => 'GET',
-            params      => [ qw/since_id max_id count page skip_user exclude_replies contributor_details include_rts include_entities trim_user include_my_retweet/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/skip_user exclude_replies contributor_details include_rts include_entities trim_user include_my_retweet/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/home_timeline',
+            method          => 'GET',
+            params          => [ qw/since_id max_id count page skip_user exclude_replies contributor_details include_rts include_entities trim_user include_my_retweet/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/skip_user exclude_replies contributor_details include_rts include_entities trim_user include_my_retweet/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'is_list_member', {
+            aliases         => [ qw// ],
+            path            => 'lists/members/show',
+            method          => 'GET',
+            params          => [ qw/owner_screen_name owner_id list_id slug user_id screen_name include_entities skip_status/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities skip_status/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'is_list_subscriber', {
+            aliases         => [ qw/is_subscribed_list/ ],
+            path            => 'lists/subscribers/show',
+            method          => 'GET',
+            params          => [ qw/owner_screen_name owner_id list_id slug user_id screen_name include_entities skip_status/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities skip_status/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'list_members', {
+            aliases         => [ qw// ],
+            path            => 'lists/members',
+            method          => 'GET',
+            params          => [ qw/list_id slug owner_screen_name owner_id cursor include_entities skip_status/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities skip_status/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'list_memberships', {
+            aliases         => [ qw// ],
+            path            => 'lists/memberships',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name cursor filter_to_owned_lists/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/filter_to_owned_lists/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'list_statuses', {
+            aliases         => [ qw// ],
+            path            => 'lists/statuses',
+            method          => 'GET',
+            params          => [ qw/list_id slug owner_screen_name owner_id since_id max_id per_page page include_entities include_rts/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities include_rts/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'list_subscribers', {
+            aliases         => [ qw// ],
+            path            => 'lists/subscribers',
+            method          => 'GET',
+            params          => [ qw/list_id slug owner_screen_name owner_id cursor include_entities skip_status/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities skip_status/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'lookup_friendships', {
-            aliases     => [ qw// ],
-            path        => 'friendships/lookup',
-            method      => 'GET',
-            params      => [ qw/user_id screen_name/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'friendships/lookup',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'lookup_users', {
-            aliases     => [ qw// ],
-            path        => 'users/lookup',
-            method      => 'GET',
-            params      => [ qw/user_id screen_name include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'users/lookup',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'members_create_all', {
+            aliases         => [ qw/add_list_members/ ],
+            path            => 'lists/members/create_all',
+            method          => 'POST',
+            params          => [ qw/list_id slug owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'members_destroy_all', {
+            aliases         => [ qw/remove_list_members/ ],
+            path            => 'lists/members/destroy_all',
+            method          => 'POST',
+            params          => [ qw/list_id slug user_id screen_name owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'mentions', {
-            aliases     => [ qw/replies/ ],
-            path        => 'statuses/replies',
-            method      => 'GET',
-            params      => [ qw/since_id max_id count page trim_user include_rts include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/trim_user include_rts include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/replies/ ],
+            path            => 'statuses/replies',
+            method          => 'GET',
+            params          => [ qw/since_id max_id count page trim_user include_rts include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/trim_user include_rts include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'new_direct_message', {
-            aliases     => [ qw// ],
-            path        => 'direct_messages/new',
-            method      => 'POST',
-            params      => [ qw/user text screen_name user_id include_entities/ ],
-            required    => [ qw/user text/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'direct_messages/new',
+            method          => 'POST',
+            params          => [ qw/user text screen_name user_id include_entities/ ],
+            required        => [ qw/user text/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'no_retweet_ids', {
-            aliases     => [ qw// ],
-            path        => 'friendships/no_retweet_ids',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'friendships/no_retweet_ids',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'public_timeline', {
-            aliases     => [ qw// ],
-            path        => 'statuses/public_timeline',
-            method      => 'GET',
-            params      => [ qw/skip_user trim_user include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/skip_user trim_user include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/public_timeline',
+            method          => 'GET',
+            params          => [ qw/skip_user trim_user include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/skip_user trim_user include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'rate_limit_status', {
-            aliases     => [ qw// ],
-            path        => 'account/rate_limit_status',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/rate_limit_status',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'related_results', {
-            aliases     => [ qw// ],
-            path        => 'related_results/show/:id',
-            method      => 'GET',
-            params      => [ qw/id/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'related_results/show/:id',
+            method          => 'GET',
+            params          => [ qw/id/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'report_spam', {
-            aliases     => [ qw// ],
-            path        => 'report_spam',
-            method      => 'POST',
-            params      => [ qw/id user_id screen_name include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'report_spam',
+            method          => 'POST',
+            params          => [ qw/id user_id screen_name include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweet', {
-            aliases     => [ qw// ],
-            path        => 'statuses/retweet/:id',
-            method      => 'POST',
-            params      => [ qw/id include_entities trim_user/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities trim_user/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/retweet/:id',
+            method          => 'POST',
+            params          => [ qw/id include_entities trim_user/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities trim_user/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by', {
-            aliases     => [ qw// ],
-            path        => 'statuses/:id/retweeted_by',
-            method      => 'GET',
-            params      => [ qw/id count page trim_user include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities trim_user/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/:id/retweeted_by',
+            method          => 'GET',
+            params          => [ qw/id count page trim_user include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities trim_user/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by_ids', {
-            aliases     => [ qw// ],
-            path        => 'statuses/:id/retweeted_by/ids',
-            method      => 'GET',
-            params      => [ qw/id count page trim_user include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities trim_user/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/:id/retweeted_by/ids',
+            method          => 'GET',
+            params          => [ qw/id count page trim_user include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities trim_user/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by_me', {
-            aliases     => [ qw// ],
-            path        => 'statuses/retweeted_by_me',
-            method      => 'GET',
-            params      => [ qw/since_id max_id count page trim_user include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/trim_user include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/retweeted_by_me',
+            method          => 'GET',
+            params          => [ qw/since_id max_id count page trim_user include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/trim_user include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweeted_by_user', {
-            aliases     => [ qw// ],
-            path        => 'statuses/retweeted_by_user',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/retweeted_by_user',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweeted_to_me', {
-            aliases     => [ qw// ],
-            path        => 'statuses/retweeted_to_me',
-            method      => 'GET',
-            params      => [ qw/since_id max_id count page/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/retweeted_to_me',
+            method          => 'GET',
+            params          => [ qw/since_id max_id count page/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweeted_to_user', {
-            aliases     => [ qw// ],
-            path        => 'statuses/retweeted_to_user',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/retweeted_to_user',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweets', {
-            aliases     => [ qw// ],
-            path        => 'statuses/retweets/:id',
-            method      => 'GET',
-            params      => [ qw/id count trim_user include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/trim_user include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/retweets/:id',
+            method          => 'GET',
+            params          => [ qw/id count trim_user include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/trim_user include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'retweets_of_me', {
-            aliases     => [ qw/retweeted_of_me/ ],
-            path        => 'statuses/retweets_of_me',
-            method      => 'GET',
-            params      => [ qw/since_id max_id count page trim_user include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/trim_user include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/retweeted_of_me/ ],
+            path            => 'statuses/retweets_of_me',
+            method          => 'GET',
+            params          => [ qw/since_id max_id count page trim_user include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/trim_user include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'reverse_geocode', {
-            aliases     => [ qw// ],
-            path        => 'geo/reverse_geocode',
-            method      => 'GET',
-            params      => [ qw/lat long accuracy granularity max_results/ ],
-            required    => [ qw/lat long/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'geo/reverse_geocode',
+            method          => 'GET',
+            params          => [ qw/lat long accuracy granularity max_results/ ],
+            required        => [ qw/lat long/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'saved_searches', {
-            aliases     => [ qw// ],
-            path        => 'saved_searches',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'saved_searches',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'sent_direct_messages', {
-            aliases     => [ qw// ],
-            path        => 'direct_messages/sent',
-            method      => 'GET',
-            params      => [ qw/since_id max_id page count include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'direct_messages/sent',
+            method          => 'GET',
+            params          => [ qw/since_id max_id page count include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'show_direct_message', {
-            aliases     => [ qw// ],
-            path        => 'direct_messages/show/:id',
-            method      => 'GET',
-            params      => [ qw/id include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'direct_messages/show/:id',
+            method          => 'GET',
+            params          => [ qw/id include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'show_friendship', {
-            aliases     => [ qw/show_relationship/ ],
-            path        => 'friendships/show',
-            method      => 'GET',
-            params      => [ qw/source_id source_screen_name target_id target_id_name/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/show_relationship/ ],
+            path            => 'friendships/show',
+            method          => 'GET',
+            params          => [ qw/source_id source_screen_name target_id target_id_name/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'show_saved_search', {
-            aliases     => [ qw// ],
-            path        => 'saved_searches/show/:id',
-            method      => 'GET',
-            params      => [ qw/id/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'saved_searches/show/:id',
+            method          => 'GET',
+            params          => [ qw/id/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'show_status', {
-            aliases     => [ qw// ],
-            path        => 'statuses/show/:id',
-            method      => 'GET',
-            params      => [ qw/id trim_user include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/trim_user include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/show/:id',
+            method          => 'GET',
+            params          => [ qw/id trim_user include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/trim_user include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'show_user', {
-            aliases     => [ qw// ],
-            path        => 'users/show/:id',
-            method      => 'GET',
-            params      => [ qw/id screen_name include_entities/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'users/show/:id',
+            method          => 'GET',
+            params          => [ qw/id screen_name include_entities/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'similar_places', {
+            aliases         => [ qw// ],
+            path            => 'geo/similar_places',
+            method          => 'GET',
+            params          => [ qw/lat long name contained_within attribute:street_address callback/ ],
+            required        => [ qw/lat long name/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'subscribe_list', {
+            aliases         => [ qw// ],
+            path            => 'lists/subscribers/create',
+            method          => 'POST',
+            params          => [ qw/owner_screen_name owner_id list_id slug/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'subscriptions', {
+            aliases         => [ qw// ],
+            path            => 'lists/subscriptions',
+            method          => 'GET',
+            params          => [ qw/user_id screen_name count cursor/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'suggestion_categories', {
-            aliases     => [ qw// ],
-            path        => 'users/suggestions',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'users/suggestions',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'test', {
-            aliases     => [ qw// ],
-            path        => 'help/test',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'help/test',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'trends', {
-            aliases     => [ qw// ],
-            path        => 'trends',
-            method      => 'GET',
-            params      => [ qw// ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'trends',
+            method          => 'GET',
+            params          => [ qw// ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 1,
+            authenticate    => 0,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'trends_available', {
-            aliases     => [ qw// ],
-            path        => 'trends/available',
-            method      => 'GET',
-            params      => [ qw/lat long/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'trends/available',
+            method          => 'GET',
+            params          => [ qw/lat long/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 0,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'trends_current', {
-            aliases     => [ qw// ],
-            path        => 'trends/current',
-            method      => 'GET',
-            params      => [ qw/exclude/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'trends/current',
+            method          => 'GET',
+            params          => [ qw/exclude/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 0,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'trends_daily', {
-            aliases     => [ qw// ],
-            path        => 'trends/daily',
-            method      => 'GET',
-            params      => [ qw/date exclude/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'trends/daily',
+            method          => 'GET',
+            params          => [ qw/date exclude/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 0,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'trends_location', {
-            aliases     => [ qw// ],
-            path        => 'trends/:woeid',
-            method      => 'GET',
-            params      => [ qw/woeid/ ],
-            required    => [ qw/woeid/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'trends/:woeid',
+            method          => 'GET',
+            params          => [ qw/woeid/ ],
+            required        => [ qw/woeid/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 0,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'trends_weekly', {
-            aliases     => [ qw// ],
-            path        => 'trends/weekly',
-            method      => 'GET',
-            params      => [ qw/date exclude/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'trends/weekly',
+            method          => 'GET',
+            params          => [ qw/date exclude/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 0,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'unsubscribe_list', {
+            aliases         => [ qw// ],
+            path            => 'lists/subscribers/destroy',
+            method          => 'POST',
+            params          => [ qw/list_id slug owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update', {
-            aliases     => [ qw// ],
-            path        => 'statuses/update',
-            method      => 'POST',
-            params      => [ qw/status lat long place_id display_coordinates in_reply_to_status_id trim_user include_entities/ ],
-            required    => [ qw/status/ ],
-            add_source  => 1,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/display_coordinates trim_user include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/update',
+            method          => 'POST',
+            params          => [ qw/status lat long place_id display_coordinates in_reply_to_status_id trim_user include_entities/ ],
+            required        => [ qw/status/ ],
+            add_source      => 1,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/display_coordinates trim_user include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update_delivery_device', {
-            aliases     => [ qw// ],
-            path        => 'account/update_delivery_device',
-            method      => 'POST',
-            params      => [ qw/device/ ],
-            required    => [ qw/device/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/update_delivery_device',
+            method          => 'POST',
+            params          => [ qw/device/ ],
+            required        => [ qw/device/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update_friendship', {
-            aliases     => [ qw// ],
-            path        => 'friendships/update',
-            method      => 'POST',
-            params      => [ qw/id user_id screen_name device retweets/ ],
-            required    => [ qw/id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/device retweets/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'friendships/update',
+            method          => 'POST',
+            params          => [ qw/id user_id screen_name device retweets/ ],
+            required        => [ qw/id/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/device retweets/ ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'update_list', {
+            aliases         => [ qw// ],
+            path            => 'lists/update',
+            method          => 'POST',
+            params          => [ qw/list_id slug name mode description owner_screen_name owner_id/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update_location', {
-            aliases     => [ qw// ],
-            path        => 'account/update_location',
-            method      => 'POST',
-            params      => [ qw/location/ ],
-            required    => [ qw/location/ ],
-            add_source  => 0,
-            deprecated  => 1,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/update_location',
+            method          => 'POST',
+            params          => [ qw/location/ ],
+            required        => [ qw/location/ ],
+            add_source      => 0,
+            deprecated      => 1,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update_profile', {
-            aliases     => [ qw// ],
-            path        => 'account/update_profile',
-            method      => 'POST',
-            params      => [ qw/name email url location description include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/update_profile',
+            method          => 'POST',
+            params          => [ qw/name email url location description include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update_profile_background_image', {
-            aliases     => [ qw// ],
-            path        => 'account/update_profile_background_image',
-            method      => 'POST',
-            params      => [ qw/image use/ ],
-            required    => [ qw/image/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/use/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/update_profile_background_image',
+            method          => 'POST',
+            params          => [ qw/image use/ ],
+            required        => [ qw/image/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/use/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update_profile_colors', {
-            aliases     => [ qw// ],
-            path        => 'account/update_profile_colors',
-            method      => 'POST',
-            params      => [ qw/profile_background_color profile_text_color profile_link_color profile_sidebar_fill_color profile_sidebar_border_color/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/update_profile_colors',
+            method          => 'POST',
+            params          => [ qw/profile_background_color profile_text_color profile_link_color profile_sidebar_fill_color profile_sidebar_border_color/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'update_profile_image', {
-            aliases     => [ qw// ],
-            path        => 'account/update_profile_image',
-            method      => 'POST',
-            params      => [ qw/image/ ],
-            required    => [ qw/image/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/update_profile_image',
+            method          => 'POST',
+            params          => [ qw/image/ ],
+            required        => [ qw/image/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
+        } ],
+        [ 'update_with_media', {
+            aliases         => [ qw// ],
+            path            => 'statuses/update_with_media',
+            method          => 'POST',
+            params          => [ qw/status media[] possibly_sensitive in_reply_to_status_id lat long place_id display_coordinates/ ],
+            required        => [ qw/status media/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/possibly_sensitive display_coordinates/ ],
+            base_url_method => 'upload_url',
         } ],
         [ 'user_suggestions', {
-            aliases     => [ qw/follow_suggestions/ ],
-            path        => 'users/suggestions/:category/members',
-            method      => 'GET',
-            params      => [ qw/category lang/ ],
-            required    => [ qw/category/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/follow_suggestions/ ],
+            path            => 'users/suggestions/:category/members',
+            method          => 'GET',
+            params          => [ qw/category lang/ ],
+            required        => [ qw/category/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw// ],
+            base_url_method => 'apiurl',
         } ],
         [ 'user_timeline', {
-            aliases     => [ qw// ],
-            path        => 'statuses/user_timeline/:id',
-            method      => 'GET',
-            params      => [ qw/id user_id screen_name since_id max_id count page skip_user trim_user include_entities include_rts/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/skip_user trim_user include_entities include_rts/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'statuses/user_timeline/:id',
+            method          => 'GET',
+            params          => [ qw/id user_id screen_name since_id max_id count page skip_user trim_user include_entities include_rts/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/skip_user trim_user include_entities include_rts/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'users_search', {
-            aliases     => [ qw/find_people search_users/ ],
-            path        => 'users/search',
-            method      => 'GET',
-            params      => [ qw/q per_page page include_entities/ ],
-            required    => [ qw/q/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw/find_people search_users/ ],
+            path            => 'users/search',
+            method          => 'GET',
+            params          => [ qw/q per_page page include_entities/ ],
+            required        => [ qw/q/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
         [ 'verify_credentials', {
-            aliases     => [ qw// ],
-            path        => 'account/verify_credentials',
-            method      => 'GET',
-            params      => [ qw/include_entities/ ],
-            required    => [ qw// ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw/include_entities/ ],
-        base_url_method => 'apiurl',
+            aliases         => [ qw// ],
+            path            => 'account/verify_credentials',
+            method          => 'GET',
+            params          => [ qw/include_entities/ ],
+            required        => [ qw// ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 1,
+            booleans        => [ qw/include_entities/ ],
+            base_url_method => 'apiurl',
         } ],
     ] ],
     [ Search => [
         [ 'search', {
-            aliases     => [ qw// ],
-            path        => 'search',
-            method      => 'GET',
-            params      => [ qw/q callback lang locale rpp page since_id until geocode show_user result_type/ ],
-            required    => [ qw/q/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 0,
-            booleans    => [ qw// ],
-        base_url_method => 'searchapiurl',
-        } ],
-    ] ],
-    [ Lists => [
-        [ 'add_list_member', {
-            aliases     => [ qw// ],
-            path        => ':user/:list_id/members',
-            method      => 'POST',
-            params      => [ qw/user list_id id/ ],
-            required    => [ qw/user list_id id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'create_list', {
-            aliases     => [ qw// ],
-            path        => ':user/lists',
-            method      => 'POST',
-            params      => [ qw/user name mode description/ ],
-            required    => [ qw/user name/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'delete_list', {
-            aliases     => [ qw// ],
-            path        => ':user/lists/:list_id',
-            method      => 'DELETE',
-            params      => [ qw/user list_id/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'delete_list_member', {
-            aliases     => [ qw/remove_list_member/ ],
-            path        => ':user/:list_id/members',
-            method      => 'DELETE',
-            params      => [ qw/user list_id id/ ],
-            required    => [ qw/user list_id id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'get_list', {
-            aliases     => [ qw// ],
-            path        => ':user/lists/:list_id',
-            method      => 'GET',
-            params      => [ qw/user list_id/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'get_lists', {
-            aliases     => [ qw/list_lists/ ],
-            path        => ':user/lists',
-            method      => 'GET',
-            params      => [ qw/user cursor/ ],
-            required    => [ qw/user/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'is_list_member', {
-            aliases     => [ qw// ],
-            path        => ':user/:list_id/members/:id',
-            method      => 'GET',
-            params      => [ qw/user list_id id/ ],
-            required    => [ qw/user list_id id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'is_list_subscriber', {
-            aliases     => [ qw/is_subscribed_list/ ],
-            path        => ':user/:list_id/subscribers/:id',
-            method      => 'GET',
-            params      => [ qw/user list_id id/ ],
-            required    => [ qw/user list_id id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'list_members', {
-            aliases     => [ qw// ],
-            path        => ':user/:list_id/members',
-            method      => 'GET',
-            params      => [ qw/user list_id id cursor/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'list_memberships', {
-            aliases     => [ qw// ],
-            path        => ':user/lists/memberships',
-            method      => 'GET',
-            params      => [ qw/user cursor/ ],
-            required    => [ qw/user/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'list_statuses', {
-            aliases     => [ qw// ],
-            path        => ':user/lists/:list_id/statuses',
-            method      => 'GET',
-            params      => [ qw/user list_id since_id max_id per_page page/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'list_subscribers', {
-            aliases     => [ qw// ],
-            path        => ':user/:list_id/subscribers',
-            method      => 'GET',
-            params      => [ qw/user list_id id cursor/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'list_subscriptions', {
-            aliases     => [ qw// ],
-            path        => ':user/lists/subscriptions',
-            method      => 'GET',
-            params      => [ qw/user cursor/ ],
-            required    => [ qw/user/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'members_create_all', {
-            aliases     => [ qw/add_list_members/ ],
-            path        => ':user/:list_id/members/create_all',
-            method      => 'POST',
-            params      => [ qw/user list_id screen_name user_id/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'subscribe_list', {
-            aliases     => [ qw// ],
-            path        => ':user/:list_id/subscribers',
-            method      => 'POST',
-            params      => [ qw/user list_id/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'unsubscribe_list', {
-            aliases     => [ qw// ],
-            path        => ':user/:list_id/subscribers',
-            method      => 'DELETE',
-            params      => [ qw/user list_id/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
-        } ],
-        [ 'update_list', {
-            aliases     => [ qw// ],
-            path        => ':user/lists/:list_id',
-            method      => 'POST',
-            params      => [ qw/user list_id name mode description/ ],
-            required    => [ qw/user list_id/ ],
-            add_source  => 0,
-            deprecated  => 0,
-            authenticate => 1,
-            booleans    => [ qw// ],
-        base_url_method => 'lists_api_url',
+            aliases         => [ qw// ],
+            path            => 'search',
+            method          => 'GET',
+            params          => [ qw/q callback lang locale rpp page since_id until geocode show_user result_type/ ],
+            required        => [ qw/q/ ],
+            add_source      => 0,
+            deprecated      => 0,
+            authenticate    => 0,
+            booleans        => [ qw// ],
+            base_url_method => 'searchapiurl',
         } ],
     ] ],
 ];
@@ -1582,6 +1932,15 @@ while ( @$api_def ) {
             # copy callers args since we may add ->{source}
             my $args = ref $_[-1] eq 'HASH' ? { %{pop @_} } : {};
 
+            if ( (my $legacy_method = $self->can("legacy_$name")) && (
+                    exists $$args{-legacy_lists_api} ? delete $$args{-legacy_lists_api}
+                        : $self->{legacy_lists_api} ) ) {
+                return $self->$legacy_method(@_, $args);
+            }
+
+            # just in case it's included where it shouldn't be:
+            delete $args->{-legacy_lists_api};
+
             croak sprintf "$name expected %d args", scalar @$arg_names if @_ > @$arg_names;
 
             # promote positional args to named args
@@ -1615,6 +1974,11 @@ while ( @$api_def ) {
             $local_path =~ s,/:id$,, unless exists $args->{id}; # remove optional trailing id
             $local_path =~ s/:(\w+)/delete $args->{$1} or croak "required arg '$1' missing"/eg;
 
+            # stringify lists
+            for ( qw/screen_name user_id/ ) {
+                $args->{$_} = join(',' => @{ $args->{$_} }) if ref $args->{$_} eq 'ARRAY';
+            }
+
             my $uri = URI->new($self->{$options{base_url_method}} . "/$local_path.json");
 
             return $self->_parse_result(
@@ -1623,12 +1987,13 @@ while ( @$api_def ) {
         };
 
         no strict 'refs';
-        *{__PACKAGE__ . "::$_"} = $code for $name, @{$options{aliases}};
+        $name = $_, *{__PACKAGE__ . "::$_"} = $code for $name, @{$options{aliases}};
     }
 }
 
 # catch expected error and promote it to an undef
-for ( qw/list_members is_list_member list_subscribers is_list_subscriber/ ) {
+for ( qw/list_members is_list_member list_subscribers is_list_subscriber
+        legacy_list_members legacy_is_list_member legacy_list_subscribers legacy_is_list_subscriber/ ) {
     my $orig = __PACKAGE__->can($_) or die;
 
     my $code = sub {
@@ -1647,36 +2012,12 @@ for ( qw/list_members is_list_member list_subscribers is_list_subscriber/ ) {
     *{__PACKAGE__ . "::$_"} = $code;
 }
 
-# special case parameter handling for lookup_users
-for ( qw/lookup_users/ ) {
-    my $orig = __PACKAGE__->can($_) or die;
-
-    my $code = sub {
-        my $self = shift;
-
-        my $args = ref $_[-1] eq 'HASH' ? pop @_ : {};
-        $args = { %$args, @_ };
-
-        for ( qw/screen_name user_id/ ) {
-            $args->{$_} = join(',' => @{ $args->{$_} }) if ref $args->{$_} eq 'ARRAY';
-        }
-
-        return $orig->($self, $args);
-    };
-
-    no strict 'refs';
-    no warnings 'redefine';
-    *{__PACKAGE__ . "::$_"} = $code;
-}
-
-
-
 } ### end scope for $api_def
 
 sub _from_json {
     my ($self, $json) = @_;
 
-    return eval { $json_handler->from_json($json) };
+    return eval { $json_handler->decode($json) };
 }
 
 sub _parse_result {
@@ -1712,7 +2053,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-This document describes Net::Twitter::Lite version 0.10004
+This document describes Net::Twitter::Lite version 0.11000_00
 
 =head1 SYNOPSIS
 
@@ -1721,6 +2062,7 @@ This document describes Net::Twitter::Lite version 0.10004
   my $nt = Net::Twitter::Lite->new(
       username => $user,
       password => $password
+      legacy_lists_api => 0,
   );
 
   my $result = eval { $nt->update('Hello, world!') };
@@ -1752,6 +2094,26 @@ versions of C<Net::Twitter>, and additional error handling options.
 
 =head1 CLIENT CODE CHANGES REQUIRED
 
+=head2 Legacy Lists API
+
+Twitter re-implemented the Lists API using new endpoints and semantics. For backwards
+compatibility, this version of C<Net::Twitter::Lite> defaults to the deprecated, legacy
+endpoints and semantics.  It issues a warning if the C<legacy_lists_api> option to new
+is not provided.
+
+To enable the new Lists endpoints and semantics, pass C<(legacy_lists_api => 0)> to
+C<new>.  To disable the warning, and keep the backwards compatible endpoints and
+semantics, pass C<(legacy_lists_api => 1)> to C<new>.
+
+The C<legacy_lists_api> option to C<new> sets the default for all lists API method
+calls.  You can override the default an each API call by passing a C<-legacy_lists_api>
+option set to 1 or 0.
+
+Support for C<legacy_lists_api> option will be removed in a future version and the
+option to C<new> will be silently ignored.
+
+=head2 netrc option
+
 The default C<apiurl> changed in version 0.08006.  The change should be
 transparent to client code, unless you're using the C<netrc> option.  If so,
 you'll need to either update the C<.netrc> entry and change the C<machine>
@@ -1762,7 +2124,7 @@ or C<netrc_machine> options to C<twitter.com>.
     # -or-
     $nt = Net::Twitter::Lite->new(netrc => 'twitter.com');
 
-=head1 IMPORTANT
+=head2 OAuth requires callback parameter
 
 Beginning with version 0.03, it is necessary for web applications using OAuth
 authentication to pass the C<callback> parameter to C<get_authorization_url>.
@@ -1997,7 +2359,7 @@ C<useragent_class>, above.  It defaults to {} (an empty HASH ref).
 =item useragent
 
 The value for C<User-Agent> HTTP header.  It defaults to
-"Net::Twitter::Lite/0.10004 (Perl)".
+"Net::Twitter::Lite/0.11000_00 (Perl)".
 
 =item source
 
@@ -2044,6 +2406,15 @@ option (below).
 
 (Optional) Sets the C<machine> entry to look up in C<.netrc> when C<<netrc => 1>>
 is used.  Defaults to C<api.twitter.com>.
+
+=item legacy_lists_api
+
+If set to 1, this option enables backwards compatibility by using the now deprecated
+endpoints and semantics for lists API methods. If set to 0, the new endpoints and
+semantics will be used. Only the new lists API methods are documented here.
+
+If you do not provide this option to C<new> a warning is issued. Support for
+this option and the legacy lists API methods will be removed in a future version.
 
 =back
 
@@ -2263,24 +2634,68 @@ and favorites of the authenticating user.
 
 Returns: HashRef
 
-=item B<all_lists>
-
-=item B<all_lists(id)>
+=item B<add_list_member>
 
 
 
 =over 4
 
-=item Parameters: id, user_id, screen_name
+=item Parameters: list_id, slug, user_id, screen_name, owner_screen_name, owner_id
 
-=item Required: id
+=item Required: I<none>
+
+=back
+
+Add a member to a list. The authenticated user must own the list to be able to
+add members to it. Note that lists can't have more than 500 members.
+
+
+Returns: User
+
+=item B<add_place>
+
+=item B<add_place(name, contained_within, token, lat, long)>
+
+
+
+=over 4
+
+=item Parameters: name, contained_within, token, lat, long, attribute:street_address, callback
+
+=item Required: name, contained_within, token, lat, long
+
+=back
+
+Creates a new place object at the given latitude and longitude.
+
+Before creating a place you need to query C<similar_places> with the latitude,
+longitude and name of the place you wish to create. The query will return an
+array of places which are similar to the one you wish to create, and a token.
+If the place you wish to create isn't in the returned array you can use the
+token with this method to create a new one.
+
+
+Returns: Place
+
+=item B<all_subscriptions>
+
+
+=item alias: all_lists
+
+=item alias: list_subscriptions
+
+
+=over 4
+
+=item Parameters: user_id, screen_name, count, cursor
+
+=item Required: I<none>
 
 =back
 
 Returns all lists the authenticating or specified user subscribes to, including
-their own. The user is specified using the C<user_id> or C<screen_name
-parameters>. If no user is given, the authenticating user is used.  Requires
-authentication unless requesting for another user.
+their own. The user is specified using the user_id or screen_name parameters.
+If no user is given, the authenticating user is used.
 
 
 Returns: ArrayRef[List]
@@ -2338,6 +2753,40 @@ Returns an array of numeric user ids the authenticating user is blocking.
 
 
 Returns: ArrayRef[Int]
+
+=item B<contributees>
+
+
+
+=over 4
+
+=item Parameters: user_id, screen_name, include_entities, skip_satus
+
+=item Required: I<none>
+
+=back
+
+Returns an array of users that the specified user can contribute to.
+
+
+Returns: ArrayRef[User]
+
+=item B<contributors>
+
+
+
+=over 4
+
+=item Parameters: user_id, screen_name, include_entities, skip_satus
+
+=item Required: I<none>
+
+=back
+
+Returns an array of users who can contribute to the specified account.
+
+
+Returns: ArrayRef[User]
 
 =item B<create_block>
 
@@ -2403,6 +2852,24 @@ failure condition when unsuccessful.
 
 Returns: BasicUser
 
+=item B<create_list>
+
+
+
+=over 4
+
+=item Parameters: list_id, slug, name, mode, description, owner_screen_name, owner_id
+
+=item Required: I<none>
+
+=back
+
+Creates a new list for the authenticated user. Note that you can't create more
+than 20 lists per account.
+
+
+Returns: List
+
 =item B<create_saved_search>
 
 =item B<create_saved_search(query)>
@@ -2422,6 +2889,44 @@ Creates a saved search for the authenticated user.
 
 Returns: SavedSearch
 
+=item B<delete_list>
+
+
+
+=over 4
+
+=item Parameters: owner_screen_name, owner_id, list_id, slug
+
+=item Required: I<none>
+
+=back
+
+Deletes the specified list. The authenticated user must own the list to be able
+to destroy it.
+
+
+Returns: List
+
+=item B<delete_list_member>
+
+
+=item alias: remove_list_member
+
+
+=over 4
+
+=item Parameters: list_id, slug, user_id, screen_name, owner_screen_name, owner_id
+
+=item Required: I<none>
+
+=back
+
+Removes the specified member from the list. The authenticated user must be the
+list's owner to remove members from the list.
+
+
+Returns: User
+
 =item B<destroy_block>
 
 =item B<destroy_block(id)>
@@ -2430,7 +2935,7 @@ Returns: SavedSearch
 
 =over 4
 
-=item Parameters: id, user_idscreen_name
+=item Parameters: id, user_id, screen_name
 
 =item Required: id
 
@@ -2643,37 +3148,6 @@ user or user specified by the ID parameter.
 
 Returns: ArrayRef[Status]
 
-=item B<followers>
-
-
-
-=over 4
-
-=item Parameters: id, user_id, screen_name, cursor, include_entities
-
-=item Required: I<none>
-
-=back
-
-Returns a reference to an array of the user's followers.  If C<id>, C<user_id>,
-or C<screen_name> is not specified, the followers of the authenticating user are
-returned.  The returned users are ordered from most recently followed to least
-recently followed.
-
-Use the optional C<cursor> parameter to retrieve users in pages of 100.  When
-the C<cursor> parameter is used, the return value is a reference to a hash with
-keys C<previous_cursor>, C<next_cursor>, and C<users>.  The value of C<users>
-is a reference to an array of the user's friends. The result set isn't
-guaranteed to be 100 every time as suspended users will be filtered out.  Set
-the optional C<cursor> parameter to -1 to get the first page of users.  Set it
-to the prior return's value of C<previous_cursor> or C<next_cursor> to page
-forward or backwards.  When there are no prior pages, the value of
-C<previous_cursor> will be 0.  When there are no subsequent pages, the value of
-C<next_cursor> will be 0.
-
-
-Returns: HashRef|ArrayRef[User]
-
 =item B<followers_ids>
 
 =item B<followers_ids(id)>
@@ -2689,7 +3163,8 @@ Returns: HashRef|ArrayRef[User]
 =back
 
 Returns a reference to an array of numeric IDs for every user following the
-specified user.
+specified user. The order of the IDs may change from call to call. To obtain
+the screen names, pass the arrayref to L</lookup_users>.
 
 Use the optional C<cursor> parameter to retrieve IDs in pages of 5000.  When
 the C<cursor> parameter is used, the return value is a reference to a hash with
@@ -2702,39 +3177,6 @@ there are no subsequent pages, the value of C<next_cursor> will be 0.
 
 
 Returns: HashRef|ArrayRef[Int]
-
-=item B<friends>
-
-
-=item alias: following
-
-
-=over 4
-
-=item Parameters: id, user_id, screen_name, cursor, include_entities
-
-=item Required: I<none>
-
-=back
-
-Returns a reference to an array of the user's friends.  If C<id>, C<user_id>,
-or C<screen_name> is not specified, the friends of the authenticating user are
-returned.  The returned users are ordered from most recently followed to least
-recently followed.
-
-Use the optional C<cursor> parameter to retrieve users in pages of 100.  When
-the C<cursor> parameter is used, the return value is a reference to a hash with
-keys C<previous_cursor>, C<next_cursor>, and C<users>.  The value of C<users>
-is a reference to an array of the user's friends. The result set isn't
-guaranteed to be 100 every time as suspended users will be filtered out.  Set
-the optional C<cursor> parameter to -1 to get the first page of users.  Set it
-to the prior return's value of C<previous_cursor> or C<next_cursor> to page
-forward or backwards.  When there are no prior pages, the value of
-C<previous_cursor> will be 0.  When there are no subsequent pages, the value of
-C<next_cursor> will be 0.
-
-
-Returns: Hashref|ArrayRef[User]
 
 =item B<friends_ids>
 
@@ -2752,8 +3194,8 @@ Returns: Hashref|ArrayRef[User]
 
 =back
 
-Returns a reference to an array of numeric IDs for every user followed the
-specified user.
+Returns a reference to an array of numeric IDs for every user followed by the
+specified user. The order of the IDs is reverse chronological.
 
 Use the optional C<cursor> parameter to retrieve IDs in pages of 5000.  When
 the C<cursor> parameter is used, the return value is a reference to a hash with
@@ -2767,26 +3209,6 @@ there are no subsequent pages, the value of C<next_cursor> will be 0.
 
 Returns: HashRef|ArrayRef[Int]
 
-=item B<friends_timeline>
-
-
-=item alias: following_timeline
-
-
-=over 4
-
-=item Parameters: since_id, max_id, count, page, skip_user, trim_user, include_entities, include_rts
-
-=item Required: I<none>
-
-=back
-
-Returns the 20 most recent statuses posted by the authenticating user
-and that user's friends. This is the equivalent of /home on the Web.
-
-
-Returns: ArrayRef[Status]
-
 =item B<friendship_exists>
 
 =item B<friendship_exists(user_a, user_b)>
@@ -2799,7 +3221,7 @@ Returns: ArrayRef[Status]
 
 =over 4
 
-=item Parameters: user_a, user_b
+=item Parameters: user_id_a, user_id_b, screen_name_a, screen_name_b, user_a, user_b
 
 =item Required: user_a, user_b
 
@@ -2807,6 +3229,18 @@ Returns: ArrayRef[Status]
 
 Tests for the existence of friendship between two users. Will return true if
 user_a follows user_b, otherwise will return false.
+
+Use of C<user_a> and C<user_b> is deprecated.  It has been preserved for backwards
+compatibility, and is used for the two-argument positional form:
+
+    $nt->friendship_exists($user_a, $user_b);
+
+Instead, you should use one of the named argument forms:
+
+    $nt->friendship_exists({ user_id_a => $id1, user_id_b => $id2 });
+    $nt->friendship_exists({ screen_name_a => $name1, screen_name_b => $name2 });
+
+Consider using C<show_friendship> instead.
 
 
 Returns: Bool
@@ -2871,6 +3305,150 @@ Returns details of a place returned from the C<reverse_geocode> method.
 
 Returns: HashRef
 
+=item B<geo_search>
+
+
+
+=over 4
+
+=item Parameters: lat, long, query, ip, granularity, accuracy, max_results, contained_within, attribute:street_address, callback
+
+=item Required: I<none>
+
+=back
+
+Search for places that can be attached to a statuses/update. Given a latitude
+and a longitude pair, an IP address, or a name, this request will return a list
+of all the valid places that can be used as the place_id when updating a
+status.
+
+Conceptually, a query can be made from the user's location, retrieve a list of
+places, have the user validate the location he or she is at, and then send the
+ID of this location with a call to statuses/update.
+
+This is the recommended method to use find places that can be attached to
+statuses/update. Unlike geo/reverse_geocode which provides raw data access,
+this endpoint can potentially re-order places with regards to the user who
+is authenticated. This approach is also preferred for interactive place
+matching with the user.
+
+
+Returns: HashRef
+
+=item B<get_configuration>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the current configuration used by Twitter including twitter.com slugs
+which are not usernames, maximum photo resolutions, and t.co URL lengths.
+
+It is recommended applications request this endpoint when they are loaded, but
+no more than once a day.
+
+
+Returns: HashRef
+
+=item B<get_languages>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the list of languages supported by Twitter along with their ISO 639-1
+code. The ISO 639-1 code is the two letter value to use if you include lang
+with any of your requests.
+
+
+Returns: ArrayRef[Lanugage]
+
+=item B<get_list>
+
+
+
+=over 4
+
+=item Parameters: list_id, slug, owner_screen_name, owner_id
+
+=item Required: I<none>
+
+=back
+
+Returns the specified list. Private lists will only be shown if the
+authenticated user owns the specified list.
+
+
+Returns: List
+
+=item B<get_lists>
+
+
+=item alias: list_lists
+
+
+=over 4
+
+=item Parameters: user_id, screen_name, cursor
+
+=item Required: I<none>
+
+=back
+
+Returns the lists of the specified (or authenticated) user. Private lists will
+be included if the authenticated user is the same as the user whose lists are
+being returned.
+
+
+Returns: Hashref
+
+=item B<get_privacy_policy>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns Twitter's privacy policy.
+
+
+Returns: HashRef
+
+=item B<get_tos>
+
+
+
+=over 4
+
+=item Parameters: I<none>
+
+=item Required: I<none>
+
+=back
+
+Returns the Twitter Terms of Service. These are not the same as the Developer
+Rules of the Road.
+
+
+Returns: HashRef
+
 =item B<home_timeline>
 
 
@@ -2889,6 +3467,117 @@ authenticating user and that user's friends. This is the equivalent of
 
 
 Returns: ArrayRef[Status]
+
+=item B<is_list_member>
+
+
+
+=over 4
+
+=item Parameters: owner_screen_name, owner_id, list_id, slug, user_id, screen_name, include_entities, skip_status
+
+=item Required: I<none>
+
+=back
+
+Check if the specified user is a member of the specified list. Returns the user or undef.
+
+
+Returns: Maybe[User]
+
+=item B<is_list_subscriber>
+
+
+=item alias: is_subscribed_list
+
+
+=over 4
+
+=item Parameters: owner_screen_name, owner_id, list_id, slug, user_id, screen_name, include_entities, skip_status
+
+=item Required: I<none>
+
+=back
+
+Check if the specified user is a subscriber of the specified list. Returns the
+user or undef.
+
+
+Returns: Maybe[User]
+
+=item B<list_members>
+
+
+
+=over 4
+
+=item Parameters: list_id, slug, owner_screen_name, owner_id, cursor, include_entities, skip_status
+
+=item Required: I<none>
+
+=back
+
+Returns the members of the specified list. Private list members will only be
+shown if the authenticated user owns the specified list.
+
+
+Returns: Hashref
+
+=item B<list_memberships>
+
+
+
+=over 4
+
+=item Parameters: user_id, screen_name, cursor, filter_to_owned_lists
+
+=item Required: I<none>
+
+=back
+
+Returns the lists the specified user has been added to. If user_id or
+screen_name are not provided the memberships for the authenticating user are
+returned.
+
+
+Returns: Hashref
+
+=item B<list_statuses>
+
+
+
+=over 4
+
+=item Parameters: list_id, slug, owner_screen_name, owner_id, since_id, max_id, per_page, page, include_entities, include_rts
+
+=item Required: I<none>
+
+=back
+
+Returns tweet timeline for members of the specified list. Historically,
+retweets were not available in list timeline responses but you can now use the
+include_rts=true parameter to additionally receive retweet objects.
+
+
+Returns: ArrayRef[Status]
+
+=item B<list_subscribers>
+
+
+
+=over 4
+
+=item Parameters: list_id, slug, owner_screen_name, owner_id, cursor, include_entities, skip_status
+
+=item Required: I<none>
+
+=back
+
+Returns the subscribers of the specified list. Private list subscribers will
+only be shown if the authenticated user owns the specified list.
+
+
+Returns: Hashref
 
 =item B<lookup_friendships>
 
@@ -2922,7 +3611,7 @@ Returns: ArrayRef
 
 =back
 
-Return up to 20 users worth of extended information, specified by either ID,
+Return up to 100 users worth of extended information, specified by either ID,
 screen name, or combination of the two. The author's most recent status (if the
 authenticating user has permission) will be returned inline.  This method is
 rate limited to 1000 calls per hour.
@@ -2946,6 +3635,57 @@ following forms are acceptable:
 
 
 Returns: ArrayRef[User]
+
+=item B<members_create_all>
+
+
+=item alias: add_list_members
+
+
+=over 4
+
+=item Parameters: list_id, slug, owner_screen_name, owner_id
+
+=item Required: I<none>
+
+=back
+
+Adds multiple members to a list, by specifying a reference to an array or a
+comma-separated list of member ids or screen names. The authenticated user must
+own the list to be able to add members to it. Note that lists can't have more
+than 500 members, and you are limited to adding up to 100 members to a list at
+a time with this method.
+
+
+Returns: List
+
+=item B<members_destroy_all>
+
+
+=item alias: remove_list_members
+
+
+=over 4
+
+=item Parameters: list_id, slug, user_id, screen_name, owner_screen_name, owner_id
+
+=item Required: I<none>
+
+=back
+
+Removes multiple members from a list, by specifying a reference to an array of
+member ids or screen names, or a string of comma separated user ids or screen
+names.  The authenticated user must own the list to be able to remove members
+from it. Note that lists can't have more than 500 members, and you are limited
+to removing up to 100 members to a list at a time with this method.
+
+Please note that there can be issues with lists that rapidly remove and add
+memberships. Take care when using these methods such that you are not too
+rapidly switching between removals and adds on the same list.
+
+
+
+Returns: List
 
 =item B<mentions>
 
@@ -3428,7 +4168,7 @@ Returns: Relationship
 
 =back
 
-Retrieve the data for a saved search, by ID, owned by the authenticating user.
+Retrieve the data for a saved search, by C<id>, owned by the authenticating user.
 
 
 Returns: SavedSearch
@@ -3476,6 +4216,67 @@ authenticated to request the page of a protected user.
 
 Returns: ExtendedUser
 
+=item B<similar_places>
+
+=item B<similar_places(lat, long, name)>
+
+
+
+=over 4
+
+=item Parameters: lat, long, name, contained_within, attribute:street_address, callback
+
+=item Required: lat, long, name
+
+=back
+
+Locates places near the given coordinates which are similar in name.
+
+Conceptually you would use this method to get a list of known places to choose
+from first. Then, if the desired place doesn't exist, make a request to
+C<add_place> to create a new one.
+
+The token contained in the response is the token needed to be able to create a
+new place.
+
+
+Returns: HashRef
+
+=item B<subscribe_list>
+
+
+
+=over 4
+
+=item Parameters: owner_screen_name, owner_id, list_id, slug
+
+=item Required: I<none>
+
+=back
+
+Subscribes the authenticated user to the specified list.
+
+
+Returns: List
+
+=item B<subscriptions>
+
+
+
+=over 4
+
+=item Parameters: user_id, screen_name, count, cursor
+
+=item Required: I<none>
+
+=back
+
+Obtain a collection of the lists the specified user is subscribed to, 20 lists
+per page by default. Does not include the user's own lists.
+
+
+Returns: ArrayRef[List]
+
 =item B<suggestion_categories>
 
 
@@ -3511,25 +4312,6 @@ Returns the string "ok" status code.
 
 
 Returns: Str
-
-=item B<trends>
-
-
-
-=over 4
-
-=item Parameters: I<none>
-
-=item Required: I<none>
-
-=back
-
-Returns the top ten queries that are currently trending on Twitter.  The
-response includes the time of the request, the name of each trending topic, and
-the url to the Twitter Search results page for that topic.
-
-
-Returns: ArrayRef[Query]
 
 =item B<trends_available>
 
@@ -3636,6 +4418,23 @@ Returns the top 30 trending topics for each day in a given week.
 
 
 Returns: HashRef
+
+=item B<unsubscribe_list>
+
+
+
+=over 4
+
+=item Parameters: list_id, slug, owner_screen_name, owner_id
+
+=item Required: I<none>
+
+=back
+
+Unsubscribes the authenticated user from the specified list.
+
+
+Returns: List
 
 =item B<update>
 
@@ -3746,6 +4545,24 @@ authentication.
 
 Returns: HashRef
 
+=item B<update_list>
+
+
+
+=over 4
+
+=item Parameters: list_id, slug, name, mode, description, owner_screen_name, owner_id
+
+=item Required: I<none>
+
+=back
+
+Updates the specified list. The authenticated user must own the list to be able
+to update it.
+
+
+Returns: List
+
 =item B<update_profile>
 
 
@@ -3841,6 +4658,46 @@ C<undef> as the first array value.
 
 
 Returns: ExtendedUser
+
+=item B<update_with_media>
+
+=item B<update_with_media(status, media)>
+
+
+
+=over 4
+
+=item Parameters: status, media[], possibly_sensitive, in_reply_to_status_id, lat, long, place_id, display_coordinates
+
+=item Required: status, media
+
+=back
+
+Updates the authenticating user's status and attaches media for upload.
+
+The C<media[]> parameter is an arrayref with the following interpretation:
+
+  [ $file ]
+  [ $file, $filename ]
+  [ $file, $filename, Content_Type => $mime_type ]
+  [ undef, $filename, Content_Type => $mime_type, Content => $raw_image_data ]
+
+The first value of the array (C<$file>) is the name of a file to open.  The
+second value (C<$filename>) is the name given to Twitter for the file.  If
+C<$filename> is not provided, the basename portion of C<$file> is used.  If
+C<$mime_type> is not provided, it will be provided automatically using
+L<LWP::MediaTypes::guess_media_type()>.
+
+C<$raw_image_data> can be provided, rather than opening a file, by passing
+C<undef> as the first array value.
+
+The Tweet text will be rewritten to include the media URL(s), which will reduce
+the number of characters allowed in the Tweet text. If the URL(s) cannot be
+appended without text truncation, the tweet will be rejected and this method
+will return an HTTP 403 error. 
+
+
+Returns: Status
 
 =item B<user_suggestions>
 
@@ -3967,380 +4824,6 @@ C<results>.  To iterate over the results, use something similar to:
     for my $status ( @{$r->{results}} ) {
         print "$status->{text}\n";
     }
-
-
-Returns: HashRef
-
-
-=back
-
-
-
-=head1 Lists API Methods
-
-
-
-=over 4
-
-=item B<add_list_member>
-
-=item B<add_list_member(user, list_id, id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id, id
-
-=item Required: user, list_id, id
-
-=back
-
-Adds the user identified by C<id> to the list.
-
-Returns a reference the added user as a hash reference.
-
-
-Returns: User
-
-=item B<create_list>
-
-=item B<create_list(user, name)>
-
-
-
-=over 4
-
-=item Parameters: user, name, mode, description
-
-=item Required: user, name
-
-=back
-
-Creates a new list for the authenticated user. The C<mode> parameter may be
-either C<public> or C<private>.  If not specified, it defaults to C<public>.
-
-
-Returns: HashRef
-
-=item B<delete_list>
-
-=item B<delete_list(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id
-
-=item Required: user, list_id
-
-=back
-
-Deletes a list owned by the authenticating user. Returns the list as a hash
-reference.
-
-
-Returns: 
-
-=item B<delete_list_member>
-
-=item B<delete_list_member(user, list_id, id)>
-
-
-=item alias: remove_list_member
-
-
-=over 4
-
-=item Parameters: user, list_id, id
-
-=item Required: user, list_id, id
-
-=back
-
-Deletes the user identified by C<id> from the specified list.
-
-Returns the deleted user as a hash reference.
-
-
-Returns: 
-
-=item B<get_list>
-
-=item B<get_list(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id
-
-=item Required: user, list_id
-
-=back
-
-Returns the specified list as a hash reference.
-
-
-Returns: HashRef
-
-=item B<get_lists>
-
-=item B<get_lists(user)>
-
-
-=item alias: list_lists
-
-
-=over 4
-
-=item Parameters: user, cursor
-
-=item Required: user
-
-=back
-
-Returns a reference to an array of lists owned by the specified user.  If the
-user is the authenticated user, it returns both public and private lists.
-Otherwise, it only returns public lists.
-
-When the C<cursor> parameter is used, a hash reference is returned; the lists
-are returned in the C<lists> element of the hash.
-
-
-Returns: ArrayRef[List]
-
-=item B<is_list_member>
-
-=item B<is_list_member(user, list_id, id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id, id
-
-=item Required: user, list_id, id
-
-=back
-
-Returns the list member as a HASH reference if C<id> is a member of the list.
-Otherwise, returns undef.
-
-
-Returns: ArrayRef[User]
-
-=item B<is_list_subscriber>
-
-=item B<is_list_subscriber(user, list_id, id)>
-
-
-=item alias: is_subscribed_list
-
-
-=over 4
-
-=item Parameters: user, list_id, id
-
-=item Required: user, list_id, id
-
-=back
-
-Returns the subscriber as a HASH reference if C<id> is a subscriber to the list.
-Otherwise, returns undef.
-
-
-Returns: ArrayRef[User]
-
-=item B<list_members>
-
-=item B<list_members(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id, id, cursor
-
-=item Required: user, list_id
-
-=back
-
-Returns the list members as an array reference.
-
-The optional C<id> parameter can be used to determine if the user specified by
-C<id> is a member of the list.  If so, the user is returned as a hash
-reference; if not, C<undef> is returned.
-
-When the C<cursor> parameter is used, a hash reference is returned; the members
-are returned in the C<users> element of the hash.
-
-
-Returns: ArrayRef[User]
-
-=item B<list_memberships>
-
-=item B<list_memberships(user)>
-
-
-
-=over 4
-
-=item Parameters: user, cursor
-
-=item Required: user
-
-=back
-
-Returns the lists the specified user is a member of as an array reference.
-
-When the C<cursor> parameter is used, a hash reference is returned; the lists
-are returned in the C<lists> element of the hash.
-
-
-Returns: 
-
-=item B<list_statuses>
-
-=item B<list_statuses(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id, since_id, max_id, per_page, page
-
-=item Required: user, list_id
-
-=back
-
-Returns a timeline of list member statuses as an array reference.
-
-
-Returns: ArrayRef[Status]
-
-=item B<list_subscribers>
-
-=item B<list_subscribers(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id, id, cursor
-
-=item Required: user, list_id
-
-=back
-
-Returns the subscribers to a list as an array reference.
-
-When the C<cursor> parameter is used, a hash reference is returned; the subscribers
-are returned in the C<users> element of the hash.
-
-
-Returns: ArrayRef[User]
-
-=item B<list_subscriptions>
-
-=item B<list_subscriptions(user)>
-
-
-
-=over 4
-
-=item Parameters: user, cursor
-
-=item Required: user
-
-=back
-
-Returns a lists to which the specified user is subscribed as an array reference.
-
-When the C<cursor> parameter is used, a hash reference is returned; the lists
-are returned in the C<lists> element of the hash.
-
-
-Returns: 
-
-=item B<members_create_all>
-
-=item B<members_create_all(user, list_id)>
-
-
-=item alias: add_list_members
-
-
-=over 4
-
-=item Parameters: user, list_id, screen_name, user_id
-
-=item Required: user, list_id
-
-=back
-
-Adds multiple users C<id> to the list. Users are specified with the C<screen_name>
-or C<user_id> parameter with a reference to an ARRAY of values.
-
-Returns a reference the added user as a hash reference.
-
-
-Returns: ArrayRef[User]
-
-=item B<subscribe_list>
-
-=item B<subscribe_list(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id
-
-=item Required: user, list_id
-
-=back
-
-Subscribes the authenticated user to the specified list.
-
-
-Returns: List
-
-=item B<unsubscribe_list>
-
-=item B<unsubscribe_list(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id
-
-=item Required: user, list_id
-
-=back
-
-Unsubscribes the authenticated user from the specified list.
-
-
-Returns: List
-
-=item B<update_list>
-
-=item B<update_list(user, list_id)>
-
-
-
-=over 4
-
-=item Parameters: user, list_id, name, mode, description
-
-=item Required: user, list_id
-
-=back
-
-Updates a list to change the name, mode, description, or any combination thereof.
 
 
 Returns: HashRef
