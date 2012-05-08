@@ -37,4 +37,4 @@ resources:
   homepage: http://github.com/semifor/Net-Twitter-Lite
   license: http://dev.perl.org/licenses/
   repository: git://github.com/semifor/net-twitter-lite.git
-version: 0.11000_00
+version: 0.11001
