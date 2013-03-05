@@ -1,55 +1,69 @@
-use inc::Module::Install;
 
-version '0.11002';
+use strict;
+use warnings;
 
-if ( $Module::Install::AUTHOR ) {
-    eval "use Net::Twitter::Core";
-    die $@ if $@;
+use 5.005;
 
-    my $perl5_lib =  join ':', @INC;
-    my @libs = map "-I$_", @INC;
+use ExtUtils::MakeMaker 6.30;
 
-    system($^X, @libs, "src/build.pl",
-           version, 'src/net-twitter-lite.tt2', 'lib/Net/Twitter/Lite.pm')
-        == 0 || die "src/bulid.pl failed: $?";
 
-    system 'pod2text lib/Net/Twitter/Lite.pm > README';
+
+my %WriteMakefileArgs = (
+  "ABSTRACT" => "A perl library for Twitter's API v1",
+  "AUTHOR" => "Marc Mims <mmims\@cpan.org>",
+  "BUILD_REQUIRES" => {
+    "File::Find" => 0,
+    "File::Temp" => 0,
+    "Test::Fatal" => 0,
+    "Test::More" => 0,
+    "Test::Simple" => "0.98"
+  },
+  "CONFIGURE_REQUIRES" => {
+    "ExtUtils::MakeMaker" => "6.30"
+  },
+  "DISTNAME" => "Net-Twitter-Lite",
+  "EXE_FILES" => [],
+  "LICENSE" => "perl",
+  "NAME" => "Net::Twitter::Lite",
+  "PREREQ_PM" => {
+    "Carp" => 0,
+    "Crypt::SSLeay" => "0.5",
+    "Encode" => 0,
+    "HTTP::Request::Common" => 0,
+    "JSON" => "2.02",
+    "LWP::UserAgent" => "2.032",
+    "Net::Netrc" => 0,
+    "URI" => "1.40",
+    "URI::Escape" => 0,
+    "overload" => 0,
+    "parent" => 0,
+    "strict" => 0,
+    "warnings" => 0
+  },
+  "VERSION" => "0.12000",
+  "test" => {
+    "TESTS" => "t/*.t"
+  }
+);
+
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
+  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
+  my $pp = $WriteMakefileArgs{PREREQ_PM};
+  for my $mod ( keys %$br ) {
+    if ( exists $pp->{$mod} ) {
+      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod};
+    }
+    else {
+      $pp->{$mod} = $br->{$mod};
+    }
+  }
 }
 
-name        'Net-Twitter-Lite';
-all_from    'lib/Net/Twitter/Lite.pm';
+delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
+  unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
 
-# core
-requires    'Carp';
-requires    'Encode';
-requires    'Memoize';
+WriteMakefile(%WriteMakefileArgs);
 
-# CPAN
-requires    'JSON'           => 2.02;
-requires    'URI'            => 1.40;
-requires    'URI::Escape';
-requires    'LWP::UserAgent' => 2.032;
-requires    'Crypt::SSLeay'  => 0.5;
 
-feature 'OAuth Authentication',
-    -default     => 1,
-    'Net::OAuth' => '0.25',
-    ;
 
-feature '.netrc support',
-    -default     => 0,
-    'Net::Netrc' => 0,
-    ;
-
-no_index    directory => 'src';
-no_index    directory => 'examples';
-
-# resources
-homepage   'http://github.com/semifor/Net-Twitter-Lite';
-bugtracker 'http://rt.cpan.org/Public/Dist/Display.html?Name=Net-Twitter-Lite';
-
-auto_set_repository;
-auto_manifest;
-auto_install;
-
-WriteAll;
