@@ -9,7 +9,7 @@ use ExtUtils::MakeMaker 6.30;
 
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "A perl library for Twitter's API v1",
+  "ABSTRACT" => "A perl API library for the Twitter API",
   "AUTHOR" => "Marc Mims <mmims\@cpan.org>",
   "BUILD_REQUIRES" => {
     "File::Find" => 0,
@@ -40,7 +40,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.12000",
+  "VERSION" => "0.12001",
   "test" => {
     "TESTS" => "t/*.t"
   }

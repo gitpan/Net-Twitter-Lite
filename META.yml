@@ -1,5 +1,5 @@
 ---
-abstract: "A perl library for Twitter's API v1"
+abstract: 'A perl API library for the Twitter API'
 author:
   - 'Marc Mims <mmims@cpan.org>'
 build_requires:
@@ -22,6 +22,7 @@ no_index:
     - src
     - examples
 recommends:
+  Net::HTTPS: 0
   Net::Netrc: 0
   Net::OAuth: 0.25
 requires:
@@ -43,4 +44,4 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=Net-Twitter-Lite
   homepage: https://github.com/semifor/net-twitter-lite
   repository: https://github.com/semifor/net-twitter-lite.git
-version: 0.12000
+version: 0.12001

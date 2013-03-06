@@ -6,7 +6,7 @@ Net::Twitter::Lite::WithAPIv1_1 - A perl interface to the Twitter API
 
 =head1 VERSION
 
-version 0.12000
+version 0.12001
 
 =head1 SYNOPSIS
 
@@ -2537,6 +2537,10 @@ Track development at L<http://github.com/semifor/net-twitter-lite>.
 =head1 AUTHOR
 
 Marc Mims <marc@questright.com> (@semifor on Twitter)
+
+=head1 CONTRIBUTORS
+
+Marek Foss (@f055)
 
 =head1 LICENSE
 

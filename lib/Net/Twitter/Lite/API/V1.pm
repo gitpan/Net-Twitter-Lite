@@ -1,6 +1,6 @@
 package Net::Twitter::Lite::API::V1;
 {
-  $Net::Twitter::Lite::API::V1::VERSION = '0.12000';
+  $Net::Twitter::Lite::API::V1::VERSION = '0.12001';
 }
 use warnings;
 use strict;
@@ -11,7 +11,7 @@ Net::Twitter::Lite::API::V1 - Method definitions for Twitter's deprecated API v1
 
 =head1 VERSION
 
-version 0.12000
+version 0.12001
 
 =cut
 
