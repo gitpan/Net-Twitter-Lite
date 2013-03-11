@@ -6,7 +6,7 @@ Net::Twitter::Lite::WithAPIv1_1 - A perl interface to the Twitter API
 
 =head1 VERSION
 
-version 0.12001
+version 0.12002
 
 =head1 SYNOPSIS
 
