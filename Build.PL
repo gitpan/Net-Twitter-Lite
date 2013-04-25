@@ -22,7 +22,7 @@ my %module_build_args = (
     "Marc Mims <mmims\@cpan.org>"
   ],
   "dist_name" => "Net-Twitter-Lite",
-  "dist_version" => "0.12002",
+  "dist_version" => "0.12003",
   "license" => "perl",
   "module_name" => "Net::Twitter::Lite",
   "recommends" => {

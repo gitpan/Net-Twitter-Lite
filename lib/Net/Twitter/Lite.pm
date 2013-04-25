@@ -9,11 +9,11 @@ Net::Twitter::Lite - A perl library for Twitter's API v1
 
 =head1 VERSION
 
-version 0.12002
+version 0.12003
 
 =cut
 
-our $VERSION = '0.12002';
+our $VERSION = '0.12003';
 
 use Carp;
 use URI::Escape;
