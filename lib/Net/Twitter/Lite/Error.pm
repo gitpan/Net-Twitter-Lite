@@ -1,6 +1,6 @@
 package Net::Twitter::Lite::Error;
 {
-  $Net::Twitter::Lite::Error::VERSION = '0.12003';
+  $Net::Twitter::Lite::Error::VERSION = '0.12004';
 }
 use warnings;
 use strict;
@@ -20,7 +20,7 @@ Net::Twitter::Lite::Error - Encapsulates errors thrown by Net::Twitter::Lite
 
 =head1 VERSION
 
-version 0.12003
+version 0.12004
 
 =head1 SYNOPSIS
 

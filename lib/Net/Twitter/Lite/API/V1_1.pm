@@ -1,6 +1,6 @@
 package Net::Twitter::Lite::API::V1_1;
 {
-  $Net::Twitter::Lite::API::V1_1::VERSION = '0.12003';
+  $Net::Twitter::Lite::API::V1_1::VERSION = '0.12004';
 }
 use warnings;
 use strict;
@@ -11,7 +11,7 @@ Net::Twitter::Lite::API::V1_1 - Twitter API v1.1 method definitions
 
 =head1 VERSION
 
-version 0.12003
+version 0.12004
 
 =cut
 
@@ -885,8 +885,8 @@ sub api_def () { +[
             booleans        => [ qw// ],
             base_url_method => 'apiurl',
         } ],
-        [ 'subscriptions', {
-            aliases         => [ qw// ],
+        [ 'list_subscriptions', {
+            aliases         => [ qw/subscriptions/ ],
             path            => 'lists/subscriptions',
             method          => 'GET',
             params          => [ qw/user_id screen_name count cursor/ ],
