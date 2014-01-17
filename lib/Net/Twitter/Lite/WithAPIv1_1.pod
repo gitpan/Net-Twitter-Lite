@@ -6,7 +6,7 @@ Net::Twitter::Lite::WithAPIv1_1 - A perl interface to the Twitter API
 
 =head1 VERSION
 
-version 0.12004
+version 0.12005
 
 =head1 SYNOPSIS
 
@@ -18,6 +18,7 @@ version 0.12004
       consumer_secret     => $consumer_secret,
       access_token        => $token,
       access_token_secret => $token_secret,
+      ssl                 => 1,
   );
 
   my $result = $nt->update('Hello, world!');
@@ -35,6 +36,34 @@ version 0.12004
            "HTTP Message......: ", $err->message, "\n",
            "Twitter error.....: ", $err->error, "\n";
   }
+
+=head1 TWITTER NOW REQUIRES SSL
+
+B<Deprecation cycle>. Twitter now requires SSL connections for API calls. To
+enable SSL, add C<( ssl =E<gt> 1)> to the options passed to new. E.g.,
+
+    my $nt = Net::Twitter::Lite::WithAPIv1_1->new(
+        consumer_key        => $key,
+        consumer_secret     => $secret,
+        access_token        => $token,
+        access_token_secret => $token_secret,
+        ssl                 => 1,  ## enable SSL! ##
+    );
+
+This version will warn if no C<ssl> option is passed to C<new>. For backwards
+compatibility, the default in this version remains SSL disabled. A future
+release will change the default to SSL enabled and remove the warning. Add
+C<( ssl =E<gt> 0 )> to disable the warning and keep SSL disabled.
+
+B<Why not just make the default SSL enabled, now?> Net::Twitter::Lite has
+always tried to adhere to a strict policy of backwards compatibility. An
+upgrade to Net::Twitter::Lite should not break or significantly change the
+behavior of existing code that relies on it. Net::Twitter is used by some for
+Twitter API compatible services that may or may not require SSL, and for some
+private test services that require non-SSL connections. They shouldn't break
+when Net::Twitter::Lite is upgraded. This deprecation cycle is the minimally
+invasive change that lets user know about Twitter's change without
+significantly changing the behavior for anyone upgrading.
 
 =head1 DESCRIPTION
 

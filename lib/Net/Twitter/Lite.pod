@@ -4,7 +4,7 @@ Net::Twitter::Lite - A perl interface to the Twitter API
 
 =head1 VERSION
 
-version 0.12004
+version 0.12005
 
 =head1 STOP!
 

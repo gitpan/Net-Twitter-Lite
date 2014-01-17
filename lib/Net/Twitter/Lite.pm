@@ -1,4 +1,5 @@
 package Net::Twitter::Lite;
+our $VERSION = '0.12005';
 use 5.005;
 use warnings;
 use strict;
@@ -9,11 +10,9 @@ Net::Twitter::Lite - A perl library for Twitter's API v1
 
 =head1 VERSION
 
-version 0.12004
+version 0.12005
 
 =cut
-
-our $VERSION = '0.12004';
 
 use Carp;
 use URI::Escape;
