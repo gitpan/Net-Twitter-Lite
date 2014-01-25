@@ -18,7 +18,7 @@ my %module_build_args = (
     "Marc Mims <mmims\@cpan.org>"
   ],
   "dist_name" => "Net-Twitter-Lite",
-  "dist_version" => "0.12005",
+  "dist_version" => "0.12006",
   "license" => "perl",
   "module_name" => "Net::Twitter::Lite",
   "recommends" => {
@@ -45,6 +45,7 @@ my %module_build_args = (
   },
   "script_files" => [],
   "test_requires" => {
+    "Data::Dumper" => 0,
     "File::Find" => 0,
     "File::Temp" => 0,
     "Test::Fatal" => 0,
@@ -55,6 +56,7 @@ my %module_build_args = (
 
 
 my %fallback_build_requires = (
+  "Data::Dumper" => 0,
   "File::Find" => 0,
   "File::Temp" => 0,
   "Module::Build" => "0.3601",
